@@ -9,7 +9,6 @@ your folders turn into pebbles, free space is a little koi pond, and the root ge
 Nagi is a skin for copyparty, a portable file server in one Python file. It only adds CSS and JS, so copyparty still does all the real work (uploads, accounts, search, shares). You can flip back to the classic copyparty UI from Settings at any time.
 
 - 🌐 **try it without a server:** open [`demo/index.html`](demo/index.html) in a browser (fictional files, same app code)
-- 🐟 **koi + navigation:** [docs/screenshots/koi.gif](docs/screenshots/koi.gif)
 
 ## Features
 
@@ -115,59 +114,9 @@ Prefer a config file? See [`examples/copyparty.conf`](examples/copyparty.conf), 
     r: *
 ```
 
-## Recommended: use it over Tailscale
+## Remote access
 
-[Tailscale](https://tailscale.com/download) puts your server, phone and laptop on a private network. This is how I use Nagi, and why:
-
-- **private access from anywhere**: your files on your phone at the café, without exposing a port to the whole internet
-- **no port forwarding**, no dynamic DNS, no router config
-- **encrypted** end to end with WireGuard, and only your own devices can reach it
-
-How:
-
-1. Install Tailscale on the server and on your phone/laptop, and sign in to the same tailnet.
-2. Find the server's tailscale IP with `tailscale ip -4` (it looks like `100.x.y.z`).
-3. Bind copyparty to **localhost + the tailscale IP only**, never `0.0.0.0`:
-
-   ```sh
-   copyparty -i 127.0.0.1,100.x.y.z -p 3979 …          # flags as above
-   # or: BIND=127.0.0.1,100.x.y.z ./examples/run-local.sh /path/to/files
-   ```
-
-   or in the config file:
-
-   ```yaml
-   [global]
-     i: 127.0.0.1, 100.x.y.z
-     p: 3979
-   ```
-
-4. With [MagicDNS](https://tailscale.com/kb/1081/magicdns) on, open `http://my-mac.tailnet-name.ts.net:3979/` from any of your devices.
-
-**Accounts.** Guests (`*`) only get read access, and only your account can change things:
-
-```yaml
-[accounts]
-  alice: a-long-password
-
-[/]
-  /path/to/your/files
-  accs:
-    r: *          # anyone on your tailnet can browse & download
-    rwmda: alice  # alice can upload / move / delete / admin
-```
-
-Want nothing visible without logging in? Drop the `r: *` line and use `r: alice` instead.
-
-**Optional HTTPS with `tailscale serve`.** [Tailscale Serve](https://tailscale.com/kb/1312/serve) gives you a real certificate for `https://my-mac.tailnet-name.ts.net` and proxies it to copyparty:
-
-```sh
-tailscale serve --bg 3979        # → https://my-mac.tailnet-name.ts.net
-```
-
-In this setup copyparty can stay on `-i 127.0.0.1` only. It already trusts the `X-Forwarded-For` header from localhost, so client IPs still show up correctly. You'll need [HTTPS certificates enabled](https://tailscale.com/kb/1153/enabling-https) for your tailnet (the command walks you through it). HTTPS is also a "secure context", so browsers allow more PWA features (service workers etc.). `tailscale serve reset` turns it off. More options are in the [`tailscale serve` CLI docs](https://tailscale.com/kb/1242/tailscale-serve).
-
-**Uploads over the internet.** `--u2j 4` (or `u2j: 4` in the config) uploads 4 chunks in parallel. It helps a lot once there's real latency between you and the server, and it's already set in the examples.
+Works great over [Tailscale](https://tailscale.com): just bind copyparty to `127.0.0.1` plus your tailnet IP (`-i 127.0.0.1,100.x.y.z`) instead of `0.0.0.0`, and open it from your phone anywhere. Over the internet, `--u2j 4` makes uploads faster.
 
 ## iPhone: add to home screen
 
