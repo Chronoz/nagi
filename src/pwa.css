@@ -1,0 +1,13 @@
+/* v3g: app feel on phones: no pull-to-refresh / rubber-band, no double-tap zoom, no callouts on chrome */
+html,body{overscroll-behavior:none;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html.nagi #nagi{touch-action:manipulation;overscroll-behavior:none}
+html.nagi #nagi .lst,html.nagi #nagi .chk,html.nagi #nagi .ctx,html.nagi #nagi .sheet,html.nagi #nagi .sh-b,html.nagi #nagi .res,html.nagi #nagi .uq{overscroll-behavior:contain}
+html.nagi #nagi button,html.nagi #nagi .tb,html.nagi #nagi .row,html.nagi #nagi svg.g,html.nagi #nagi .lbs,html.nagi #nagi .legend,html.nagi #nagi .crumb,html.nagi #nagi .num,html.nagi #nagi .chh,html.nagi #nagi .np,html.nagi #nagi .mm,html.nagi #nagi .lbx img,html.nagi #nagi .lst tr{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+html.nagi #nagi{height:100vh;height:100dvh;bottom:auto}
+/* iPhone X and later: keep clear of the notch / status bar (installed app draws under it) and the home indicator */
+@media (max-width:760px){
+ html.nagi #nagi .tb{height:calc(56px + env(safe-area-inset-top));padding-top:env(safe-area-inset-top);padding-left:max(6px,env(safe-area-inset-left));padding-right:max(14px,env(safe-area-inset-right))}
+ html.nagi #nagi .sheet{padding-bottom:env(safe-area-inset-bottom)}
+ html.nagi #nagi .lbx{padding-top:calc(60px + env(safe-area-inset-top));padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+ html.nagi #nagi .lbx .x{top:calc(12px + env(safe-area-inset-top))}
+}

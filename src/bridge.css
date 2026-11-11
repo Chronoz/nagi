@@ -1,0 +1,28 @@
+/* ---------- bridge: copyparty underneath the Nagi window ---------- */
+html.nagi:not(.nagi-classic),html.nagi:not(.nagi-classic) body{overflow:hidden!important;height:100%}
+html.nagi:not(.nagi-classic) body>*:not(#nagi):not(#modal):not(#toast):not(#tt):not(#nagi-back):not(#shui):not(script){visibility:hidden!important}
+html.nagi:not(.nagi-classic) #drops{visibility:visible!important}
+html.nagi.nagi-classic #nagi{display:none}
+#nagi-back{display:none}
+html.nagi.nagi-classic #nagi-back{display:inline-flex;position:fixed;right:22px;bottom:22px;z-index:900;align-items:center;gap:8px;height:42px;padding:0 18px;border-radius:999px;border:0;background:var(--n-ink);color:var(--n-paper);font:500 13.5px var(--n-ui);cursor:pointer;box-shadow:0 14px 30px -14px rgba(10,24,26,.6)}
+html.nagi.nagi-classic #nagi-back .ni{width:15px;height:15px}
+/* copyparty's drop zones become invisible catchers; Nagi draws the message */
+html.nagi:not(.nagi-classic) #drops{opacity:0!important;z-index:60!important}
+html.nagi:not(.nagi-classic) #up_dz{position:fixed!important;inset:0!important;width:auto!important;height:auto!important;top:0!important;bottom:0!important}
+html.nagi:not(.nagi-classic) #srch_dz,html.nagi:not(.nagi-classic) #srch_zd{display:none!important}
+/* copyparty modal + toast in Nagi clothes */
+html.nagi #modal{z-index:2000!important;background:color-mix(in srgb,var(--n-paper) 55%,transparent)!important;backdrop-filter:blur(3px)}
+html.nagi #modalc{background:var(--n-card)!important;color:var(--n-ink)!important;border:1px solid var(--n-rule2)!important;border-radius:18px!important;box-shadow:var(--n-shadow)!important;padding:26px 28px 22px!important;font:400 14px/1.55 var(--n-ui)!important;max-width:min(520px,92vw)!important}
+html.nagi #modalc h6{font:400 22px var(--n-serif)!important;color:var(--n-car)!important;margin:0 0 8px!important}
+html.nagi #modalc ul{margin:10px 0!important;padding-left:18px!important;max-height:40vh;overflow:auto;color:var(--n-ink2)}
+html.nagi #modalc a,html.nagi #modal-ok,html.nagi #modal-ng{font:500 13.5px var(--n-ui)!important;border-radius:999px!important;padding:10px 20px!important;border:1px solid var(--n-ink)!important;background:transparent!important;color:var(--n-ink)!important;text-shadow:none!important;box-shadow:none!important}
+html.nagi #modal-ok{background:var(--n-ink)!important;color:var(--n-paper)!important}
+html.nagi #modalc input{font:400 15px var(--n-ui)!important;border:1px solid var(--n-rule)!important;border-radius:12px!important;background:var(--n-paper)!important;color:var(--n-ink)!important;padding:10px 12px!important}
+html.nagi #toast{z-index:2100!important;background:var(--n-card)!important;color:var(--n-ink2)!important;border:1px solid var(--n-rule2)!important;border-radius:9px!important;box-shadow:0 6px 18px -12px rgba(40,30,10,.35)!important;font:400 12.5px/1.45 var(--n-ui)!important;padding:7px 32px 7px 12px!important;max-width:min(360px,88vw)}
+html.nagi #toast a#toastc{color:var(--n-mute)!important;background:transparent!important;border:0!important;opacity:.6}
+html.nagi #toast.vis{animation:nrise .35s var(--n-ease)}
+html.nagi #toast::before{display:none!important}
+html.nagi #toast.err{background:var(--n-card)!important;color:var(--n-car)!important}
+html.nagi #toast #toastt{display:none!important}
+html.nagi #tt{background:var(--n-ink)!important;color:var(--n-paper)!important;border:0!important;border-radius:10px!important;font:400 12px/1.5 var(--n-ui)!important;box-shadow:var(--n-shadow-s)!important;text-shadow:none!important}
+html.nagi:not(.nagi-classic) #tt{display:none!important}

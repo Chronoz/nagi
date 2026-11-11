@@ -1,0 +1,13 @@
+<!doctype html><html lang="en" id="ht_spl" class="fy f y"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>copyparty @ nagi.local</title><style>/*CSS*/</style></head><body>
+<div id="wrap">
+<a id="a" href="#" class="af">refresh</a><a id="v" href="#" class="af">connect</a>
+<p id="b">howdy stranger <small>(you're not logged in)</small></p>
+<h1 id="f">you can browse:</h1><ul><li><a href="index.html">/</a></li></ul>
+<h1 id="l">login for more:</h1><div><form id="lf" method="get" action="index.html"><input type="hidden" id="la" name="act" value="login"><input type="text" id="lu" name="uname" placeholder=" username" size="12"><input type="password" id="lp" name="cppwd" placeholder=" password" size="12"><input type="submit" id="ls" value="login"><div id="lm"></div></form></div>
+<h1 id="cc">other stuff:</h1><div class="agr"><a id="af" href="#">show recent uploads</a><br><a id="k" href="#" class="r">reset client settings</a></div>
+</div><span id="pb"><span>powered by</span> <a href="https://github.com/9001/copyparty">copyparty</a></span>
+<script>
+document.getElementById('lf').onsubmit=function(e){var u=document.getElementById('lu').value,p=document.getElementById('lp').value;if(!u||!p){e.preventDefault();document.getElementById('lm').textContent='ERROR: Username and/or password cannot be blank';return}
+ if(p!='demo'){e.preventDefault();sessionStorage.nagi_bad='1';location.reload()}};
+/*JS*/
+</script></body></html>

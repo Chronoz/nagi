@@ -1,0 +1,166 @@
+/* classic view: the full copyparty UI, re-coloured (shown when Settings → Classic copyparty view) */
+/* 凪 Nagi — a calm skin for the real copyparty UI.
+   Loaded with: --css-browser /.nagi/nagi.css --themes 12 --theme 11
+   theme 10 = html.fz (Yūgure, evening) · theme 11 = html.fy (Paper, day)
+   Only touches html.f*, so the stock themes 0–9 stay untouched. */
+
+html.f{--n-teal:var(--n-teal5);--n-amber:var(--n-window);--n-amber-soft:var(--n-window-soft);--n-danger:var(--n-car)}
+html.fz{--n-teal:#7FB0A4}
+html.f{
+ --fg:var(--n-ink);--fg-max:var(--n-ink);--fg2-max:var(--n-ink);--fg-weak:var(--n-mute);
+ --bg-d3:var(--n-paper2);--bg-d2:var(--n-paper2);--bg-d1:var(--n-paper2);--bg:var(--n-paper);--bgg:var(--n-paper);
+ --bg-u1:var(--n-card);--bg-u2:var(--n-card);--bg-u3:var(--n-paper2);--bg-u4:var(--n-card);--bg-u5:var(--n-rule);--bg-u6:var(--n-rule);--bg-max:var(--n-card);
+ --tab-alt:var(--n-amber);--row-alt:transparent;--scroll:var(--n-faint);--sel-fg:var(--n-ink);--sel-bg:var(--n-amber-soft);
+ --a:var(--n-ink);--a-b:var(--n-teal);--a-hil:var(--n-amber);--a-dark:var(--n-amber);--a-gray:var(--n-faint);
+ --btn-fg:var(--n-ink2);--btn-bg:transparent;--btn-h-fg:var(--n-ink);--btn-h-bg:var(--n-paper2);--btn-1-fg:var(--n-paper);--btn-1-bg:var(--n-ink);--btn-1h-fg:var(--n-paper);--btn-1h-bg:var(--n-ink2);
+ --btn-bs:none;--btn-bb:none;--btn-1-bs:none;--btn-1-bb:none;--btn-h-bs:none;--btn-h-bb:none;--btn-1h-bs:none;--btn-1h-bb:none;
+ --chk-fg:var(--n-amber);--txt-sh:transparent;--txt-bg:var(--n-card);
+ --op-aa-fg:var(--n-ink);--op-aa-bg:var(--n-card);--op-a-sh:transparent;--op-aa-sh:none;
+ --u2-btn-b1:var(--n-rule);--u2-sbtn-b1:var(--n-rule);--u2-txt-bg:var(--n-card);--u2-tab-bg:transparent;--u2-tab-b1:var(--n-rule);--u2-tab-1-fg:var(--n-ink);--u2-tab-1-bg:var(--n-card);--u2-tab-1-b1:var(--n-ink);--u2-tab-1-b2:var(--n-rule);--u2-tab-1-sh:transparent;
+ --u2-b-fg:var(--n-paper);--u2-b1-bg:var(--n-ink);--u2-b2-bg:var(--n-amber);--u2-inf-bg:var(--n-teal);--u2-inf-b1:var(--n-teal);--u2-ok-bg:var(--n-teal);--u2-ok-b1:var(--n-teal);--u2-err-bg:var(--n-danger);--u2-err-b1:var(--n-danger);--ud-b1:var(--n-rule);
+ --sort-1:var(--n-amber);--sort-2:var(--n-gold);
+ --sz-b:var(--n-faint);--sz-k:var(--n-mute);--sz-m:var(--n-ink2);--sz-g:var(--n-ink);--sz-t:var(--n-ink);--sz-p:var(--n-ink);
+ --srv-1:var(--n-mute);--srv-2:var(--n-mute);--srv-3:var(--n-amber);--srv-3b:var(--n-amber-soft);
+ --tree-bg:var(--n-paper);
+ --g-play-bg:var(--n-amber-soft);--g-play-b1:var(--n-amber);--g-play-b2:var(--n-amber);--g-play-sh:transparent;
+ --g-sel-fg:var(--n-ink);--g-sel-bg:var(--n-amber-soft);--g-sel-b1:var(--n-amber);--g-sel-sh:transparent;--g-fsel-bg:var(--n-amber-soft);--g-fsel-b1:var(--n-amber);--g-fsel-ts:transparent;
+ --g-fg:var(--n-ink);--g-bg:var(--n-card);--g-b1:var(--n-rule2);--g-b2:var(--n-rule);--g-g1:var(--n-card);--g-g2:var(--n-rule);--g-f-bg:var(--n-card);--g-f-b1:var(--n-rule);--g-sh:transparent;
+ --f-sel-sh:var(--n-amber);--fm-off:var(--n-faint);--mp-sh:var(--n-rule);--mp-b-bg:transparent;
+ --f-sh1:0;--f-sh2:0;--f-sh3:0;
+ text-shadow:none;
+}
+html.f body{background:var(--n-paper);color:var(--n-ink);font:400 14px/1.5 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased;font-feature-settings:"tnum" 1}
+html.f body::before{display:none;content:"";position:fixed;inset:0;pointer-events:none;z-index:9;opacity:.5;mix-blend-mode:multiply;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .35 0 0 0 0 .3 0 0 0 0 .22 0 0 0 .08 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+html.fz body::before{mix-blend-mode:screen;opacity:.25}
+html.f input,html.f select,html.f textarea,html.f button{font-family:Inter,system-ui,sans-serif}
+
+/* top: account line + tab bar become one quiet header */
+html.f #acc_info{color:var(--n-faint);font-size:12px;padding:14px 40px 0;letter-spacing:.01em}
+html.f #acc_info a{color:var(--n-ink);border:1px solid var(--n-rule);border-radius:99px;padding:3px 12px;margin-left:10px}
+html.f #ops{background:transparent;box-shadow:none;border:0;border-bottom:1px solid var(--n-rule);border-radius:0;margin:6px 40px 0;padding:6px 0 10px;display:flex;gap:4px}
+html.f #ops>a{font-size:0;padding:0 14px;height:34px;line-height:34px;border-radius:99px;color:var(--n-mute);background:transparent;box-shadow:none;transition:background .2s,color .2s}
+html.f #ops>a::after{font-size:13px;letter-spacing:.01em}
+html.f #ops>a:hover{background:var(--n-paper2);color:var(--n-ink)}
+html.f #ops>a.act{background:var(--n-ink);color:var(--n-paper)}
+html.f #opa_x::after{content:"×";font-size:16px!important}
+html.f #opa_srch::after{content:"Search"}
+html.f #opa_del::after{content:"Undo uploads"}
+html.f #opa_up::after{content:"Upload"}
+html.f #opa_bup::after{content:"Basic upload"}
+html.f #opa_mkd::after{content:"New folder"}
+html.f #opa_md::after{content:"New file"}
+html.f #opa_msg::after{content:"Message"}
+html.f #opa_auc::after{content:"Player"}
+html.f #opa_cfg::after{content:"Settings"}
+html.f #opa_up{order:-1;color:var(--n-ink);border:1px solid var(--n-ink);margin-right:8px}
+html.f #opa_bup,html.f #opa_msg{display:none}
+html.f .opbox{background:var(--n-card);border:1px solid var(--n-rule2);border-radius:18px;box-shadow:0 18px 48px -22px rgba(60,48,28,.28);margin:16px 40px}
+
+/* breadcrumbs + tree */
+html.f #path{font:400 28px/1.2 Newsreader,Georgia,serif;background:transparent;border:0;box-shadow:none;padding:28px 0 8px;margin:0}
+html.f #path a{color:var(--n-mute);border-radius:8px;padding:2px 6px}
+html.f #path a:last-child{color:var(--n-ink)}
+html.f #path i{border-color:var(--n-faint);opacity:.5}
+html.f #tree{background:var(--n-paper);border-right:1px solid var(--n-rule2);box-shadow:none;padding-top:10px}
+html.f #treeh{background:transparent!important;border:0}
+html.f #treeul a{border-radius:8px;color:var(--n-ink2)}
+html.f #treeul a.hl{background:var(--n-ink);color:var(--n-paper);box-shadow:none}
+html.f #treeul a:hover{background:var(--n-paper2)}
+html.f #treeul li{border:0}
+html.f #tree .btn,html.f #treeh a{border-radius:99px;background:transparent;box-shadow:none}
+
+/* the file list: hairlines, room to breathe, no zebra, no colour soup */
+html.f #wrap{padding:0 40px 140px 28px}
+html.f #files{border-collapse:collapse;background:transparent;border:0;box-shadow:none;font-size:14px;margin-top:6px}
+html.f #files thead th{background:var(--n-paper)!important;color:var(--n-faint);font:500 11px/1 Inter,sans-serif;letter-spacing:.12em;text-transform:uppercase;border:0;border-bottom:1px solid var(--n-rule);padding:14px 12px 12px;text-shadow:none;box-shadow:none}
+html.f #files tbody td{border:0;border-bottom:1px solid var(--n-rule2);padding:15px 12px;background:transparent;color:var(--n-mute);font-size:13px}
+html.f #files tbody td:nth-child(2){color:var(--n-ink);font-size:14px}
+html.f #files tbody tr:hover td{background:color-mix(in srgb,var(--n-paper2) 70%,transparent)}
+html.f #files tbody tr.sel td{background:var(--n-amber-soft)!important;color:var(--n-ink)}
+html.f #files tbody tr.play td{background:var(--n-amber-soft)}
+html.f #files tbody tr.play td:nth-child(2) a{color:var(--n-amber)}
+html.f #files a{color:inherit;text-decoration:none}
+html.f #files td:first-child a{font-size:11.5px;color:var(--n-faint);letter-spacing:.04em;text-transform:uppercase;border:1px solid var(--n-rule);border-radius:99px;padding:3px 9px}
+html.f #files td:first-child a:hover{color:var(--n-ink);border-color:var(--n-ink)}
+html.f #files .fsz_B,html.f #files .fsz_K,html.f #files .fsz_M,html.f #files .fsz_G,html.f #files .fsz_T{color:var(--n-mute)!important;font-weight:400!important}
+html.f #files tbody tr:nth-child(odd) td{background:transparent}
+html.f #files tbody tr:nth-child(odd):hover td{background:color-mix(in srgb,var(--n-paper2) 70%,transparent)}
+
+/* grid / thumbnails */
+html.f #ggrid>a{background:transparent;border:0;border-radius:14px;box-shadow:none;padding:8px}
+html.f #ggrid>a:hover{background:var(--n-paper2)}
+html.f #ggrid>a img{border-radius:10px;box-shadow:none}
+html.f #ggrid>a.sel{background:var(--n-amber-soft);box-shadow:inset 0 0 0 1.5px var(--n-amber)}
+
+/* bottom widget: the player becomes a quiet paper bar */
+html.f #widget{background:color-mix(in srgb,var(--n-card) 92%,transparent);backdrop-filter:blur(14px);border-top:1px solid var(--n-rule2);box-shadow:0 -18px 48px -30px rgba(60,48,28,.35)}
+html.f #widgeti{background:transparent}
+html.f #wtoggle{background:var(--n-card);border:1px solid var(--n-rule2);border-bottom:0;border-radius:16px 0 0 0;box-shadow:none}
+html.f #wtoggle a{color:var(--n-ink2);border-radius:10px}
+html.f #wtoggle a:hover{background:var(--n-paper2)}
+html.f #pctl a{background:transparent;color:var(--n-ink);border-radius:50%;box-shadow:none}
+html.f #pctl a#bplay{background:var(--n-ink);color:var(--n-paper)}
+html.f #np_inf{color:var(--n-mute);font-size:12.5px}
+html.f #np_title{color:var(--n-ink);font-weight:500}
+
+/* footer nav, tooltips, toasts */
+html.f #wfp{font:400 13px Inter,sans-serif;margin-top:34px;color:var(--n-faint)}
+html.f #wfp a{color:var(--n-mute);border:0;padding:4px 8px;border-radius:99px;background:transparent;box-shadow:none}
+html.f #wfp a:hover{background:var(--n-paper2);color:var(--n-ink)}
+html.f #tt,html.f #toast{background:var(--n-card);color:var(--n-ink);border:1px solid var(--n-rule2);border-radius:12px;box-shadow:0 18px 48px -22px rgba(60,48,28,.35)}
+html.f #srv_info{color:var(--n-faint)}
+
+/* hero injected by nagi.js */
+#nagi-hero{display:flex;align-items:flex-end;gap:46px;padding:34px 0 8px}
+#nagi-hero .ey{font:500 11px/1.2 Inter,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--n-mute)}
+#nagi-hero .big{font:200 88px/.9 Inter,sans-serif;letter-spacing:-.04em;margin:12px 0 6px;color:var(--n-ink)}
+#nagi-hero .big small{font-size:26px;font-weight:300;color:var(--n-mute);letter-spacing:0;margin-left:8px}
+#nagi-hero .sub{color:var(--n-mute);font-size:13px}
+#nagi-hero .cap{width:300px;height:5px;margin-top:16px;border-radius:9px;background:repeating-linear-gradient(90deg,var(--n-rule) 0 1px,transparent 1px 5px);position:relative}
+#nagi-hero .cap i{position:absolute;inset:0 auto 0 0;border-radius:9px;background:var(--n-ink)}
+#nagi-hero svg{flex:1;max-width:520px;height:120px}
+#nagi-hero svg path{fill:none;stroke:var(--n-faint);stroke-width:.8}
+html:not(.f) #nagi-hero{display:none}
+html.f #srv_info2{display:none}
+html.f #acc_info{position:absolute;right:0;top:0;padding:18px 40px 0;z-index:3}
+html.f #ops{padding-top:14px}
+html.f #files{width:100%}
+html.f #treeul a.hl{padding:2px 8px}
+html.f #srv_info{display:none}
+/* seekbar + volume are painted on <canvas> with hard-coded colours in browser.js;
+   a filter is the only CSS lever, so we mute them to warm greys */
+html.f #barpos,html.f #barbuf{filter:grayscale(1) sepia(.25) contrast(.85);opacity:.85;border-radius:8px}
+html.f #pvol{filter:grayscale(1) sepia(.35);opacity:.8;border-radius:8px}
+html.f #pctl a{filter:grayscale(1) sepia(.2)}
+/* ---- classic polish: one icon set (Lucide), no emoji ---- */
+html.f #repl{display:none!important}
+html.f #treeh a,html.f #wtoggle>a,html.f #wfm a,html.f #wzip1 a,html.f #wnp a,html.f #wm3u a,html.f #pctl a{font-size:0!important;display:inline-flex!important;align-items:center;justify-content:center;gap:4px;color:var(--n-ink2)!important}
+html.f #treeh a::before,html.f #wtoggle>a::before,html.f #wfm a::before,html.f #wzip1 a::before,html.f #wnp a::before,html.f #wm3u a::before,html.f #pctl a::before{content:"";width:16px;height:16px;background:currentColor;-webkit-mask:var(--ni) center/contain no-repeat;mask:var(--ni) center/contain no-repeat;flex:none}
+html.f #wfm a span,html.f #wzip1 a span,html.f #wnp a span,html.f #wm3u a span{font-size:10px!important;display:block}
+html.f #wfm a,html.f #wzip1 a,html.f #wnp a,html.f #wm3u a{flex-direction:column}
+html.f #detree{--ni:var(--ni-arrow-up)}html.f #twobytwo{--ni:var(--ni-plus)}html.f #twig{--ni:var(--ni-minus)}html.f #visdir{--ni:var(--ni-crosshair)}html.f #filetree{--ni:var(--ni-file-text)}html.f #parpane{--ni:var(--ni-pin)}html.f #dyntree{--ni:var(--ni-chevrons-up-down)}html.f #wraptree{--ni:var(--ni-wrap-text)}html.f #hovertree{--ni:var(--ni-eye)}
+html.f #fshr{--ni:var(--ni-share)}html.f #fren{--ni:var(--ni-pencil)}html.f #fdel{--ni:var(--ni-trash-2)}html.f #fcut{--ni:var(--ni-scissors)}html.f #fcpy{--ni:var(--ni-copy)}html.f #fpst{--ni:var(--ni-clipboard-paste)}html.f #zip1{--ni:var(--ni-download)}
+html.f #npirc,html.f #nptxt{--ni:var(--ni-clipboard-paste)}html.f #m3ua,html.f #m3uc{--ni:var(--ni-radio)}html.f #wtgrid{--ni:var(--ni-layout-grid)}html.f #wtico{--ni:var(--ni-music)}
+html.f #bprev{--ni:var(--ni-skip-back)}html.f #bnext{--ni:var(--ni-skip-forward)}html.f #bplay{--ni:var(--ni-play)}html.f #bplay.nagi-pause,html.f .playing #bplay{--ni:var(--ni-pause)}
+html.f #pctl a::before{width:20px;height:20px}
+html.f #treeh{display:flex!important;gap:2px;align-items:center;padding:10px 10px 8px!important}
+html.f #treeh a{width:30px;height:30px;border-radius:8px!important;padding:0!important;margin:0!important;border:0!important;background:transparent!important}
+html.f #treeh a:hover,html.f #treeh a.on{background:var(--n-paper2)!important;color:var(--n-ink)!important}
+html.f #treeul a[dst]{font-size:0!important;width:18px;display:inline-flex!important;align-items:center;justify-content:center;color:var(--n-faint)!important;padding:0!important;background:transparent!important;border:0!important}
+html.f #treeul a[dst]::before{content:"";width:13px;height:13px;background:currentColor;-webkit-mask:var(--ni-chevron-right) center/contain no-repeat;mask:var(--ni-chevron-right) center/contain no-repeat;transition:transform .2s}
+html.f #treeul li.nagi-open>a[dst]::before{transform:rotate(90deg)}
+html.f #treeul>li>a.hl,html.f #treeul>li>a[href="/"]{font-size:0!important}
+html.f #treeul>li>a[href="/"]::after{content:"Everything";font-size:13px;font-weight:500;letter-spacing:.01em}
+html.f #treeul a:not([dst]){border-radius:7px!important;padding:3px 8px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html.f #treeul ul{border-left:1px solid var(--n-rule2);margin-left:8px!important;padding-left:4px!important}
+html.f #files td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px}
+html.f #files td:nth-child(2){max-width:360px}
+html.f #files td:first-child a{font-size:0!important}
+html.f #files td:first-child a::before{content:"";display:inline-block;width:14px;height:14px;background:currentColor;-webkit-mask:var(--ni-play) center/contain no-repeat;mask:var(--ni-play) center/contain no-repeat;vertical-align:middle}
+html.f #files td:first-child a[href*="zip"]::before{-webkit-mask-image:var(--ni-download);mask-image:var(--ni-download)}
+html.f #treeul li{display:flex!important;flex-wrap:wrap;align-items:center}
+html.f #treeul li>ul{flex-basis:100%}
+html.f #treeul li>a:not([dst]){flex:1;min-width:0}
+html.f #treeul{padding-left:6px!important}
+html.f #files td{max-width:200px}
+html.f #wrap{overflow-x:auto}
