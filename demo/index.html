@@ -851,7 +851,7 @@ html.fz #nagi svg.g .cell:not(.free):hover .f{filter:drop-shadow(0 6px 10px rgba
    the top bar is only the name / folder title with a large back button */
 #nagi .bb,#nagi .tbk,#nagi .tbt{display:none}
 @media (max-width:760px){
- #nagi{--bbh:calc(60px + env(safe-area-inset-bottom));--dh:118px}
+ #nagi{--bbh:calc(61px + env(safe-area-inset-bottom));--dh:118px}
  #nagi.playing{--dh:226px}
  #nagi .menu,#nagi .mo,#nagi .msel,#nagi .msel.on{display:none!important}
  #nagi .tb{justify-content:flex-start}
@@ -902,12 +902,25 @@ html.fz #nagi svg.g .cell:not(.free):hover .f{filter:drop-shadow(0 6px 10px rgba
  #nagi input,#nagi textarea,#nagi select{font-size:16px!important}
 }
 #nagi .bb .bt:focus:not(:focus-visible),#nagi .tav:focus:not(:focus-visible){outline:none;box-shadow:none}
+/* v3j: every real target shows its own small press state on touch (the field itself never highlights) */
+@media (hover:none){
+ #nagi svg.g .cell:active{opacity:.8}
+ #nagi .chk .row:active,#nagi .lst tr:active{background:var(--w-bg2)}
+ #nagi .tbk:active,#nagi .mm button:active{background:var(--w-bg2)}
+}
 /* v3g: app feel on phones: no pull-to-refresh / rubber-band, no double-tap zoom, no callouts on chrome */
 html,body{overscroll-behavior:none;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 html.nagi #nagi{touch-action:manipulation;overscroll-behavior:none}
 html.nagi #nagi .lst,html.nagi #nagi .chk,html.nagi #nagi .ctx,html.nagi #nagi .sheet,html.nagi #nagi .sh-b,html.nagi #nagi .res,html.nagi #nagi .uq{overscroll-behavior:contain}
 html.nagi #nagi button,html.nagi #nagi .tb,html.nagi #nagi .row,html.nagi #nagi svg.g,html.nagi #nagi .lbs,html.nagi #nagi .legend,html.nagi #nagi .crumb,html.nagi #nagi .num,html.nagi #nagi .chh,html.nagi #nagi .np,html.nagi #nagi .mm,html.nagi #nagi .lbx img,html.nagi #nagi .lst tr{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
-html.nagi #nagi{height:100vh;height:100dvh;bottom:auto}
+html.nagi #nagi{height:100vh;height:100dvh;height:var(--nagi-h,100dvh);bottom:auto}
+/* v3j: the document behind Nagi can never scroll (iOS mis-aims taps on fixed layers after it does) */
+html.nagi:not(.nagi-classic) body{position:fixed!important;top:0;left:0;right:0;bottom:0;overflow:hidden!important;margin:0}
+/* v3j: no grey tap flash over the whole field and no long-press text selection on chrome or stones;
+   text stays selectable in fields and in the text viewer */
+html.nagi #nagi,html.nagi #nagi *{-webkit-tap-highlight-color:transparent}
+html.nagi #nagi{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+html.nagi #nagi input,html.nagi #nagi textarea,html.nagi #nagi [contenteditable],html.nagi #nagi .txt,html.nagi #nagi .txt *{-webkit-touch-callout:default;-webkit-user-select:text;user-select:text}
 /* iPhone X and later: keep clear of the notch / status bar (installed app draws under it) and the home indicator */
 @media (max-width:760px){
  html.nagi #nagi .tb{height:calc(56px + env(safe-area-inset-top));padding-top:env(safe-area-inset-top);padding-left:max(6px,env(safe-area-inset-left));padding-right:max(14px,env(safe-area-inset-right))}

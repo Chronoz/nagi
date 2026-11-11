@@ -467,7 +467,7 @@ html.fz #nagi svg.g .cell:not(.free):hover .f{filter:drop-shadow(0 6px 10px rgba
    the top bar is only the name / folder title with a large back button */
 #nagi .bb,#nagi .tbk,#nagi .tbt{display:none}
 @media (max-width:760px){
- #nagi{--bbh:calc(60px + env(safe-area-inset-bottom));--dh:118px}
+ #nagi{--bbh:calc(61px + env(safe-area-inset-bottom));--dh:118px}
  #nagi.playing{--dh:226px}
  #nagi .menu,#nagi .mo,#nagi .msel,#nagi .msel.on{display:none!important}
  #nagi .tb{justify-content:flex-start}
@@ -518,3 +518,9 @@ html.fz #nagi svg.g .cell:not(.free):hover .f{filter:drop-shadow(0 6px 10px rgba
  #nagi input,#nagi textarea,#nagi select{font-size:16px!important}
 }
 #nagi .bb .bt:focus:not(:focus-visible),#nagi .tav:focus:not(:focus-visible){outline:none;box-shadow:none}
+/* v3j: every real target shows its own small press state on touch (the field itself never highlights) */
+@media (hover:none){
+ #nagi svg.g .cell:active{opacity:.8}
+ #nagi .chk .row:active,#nagi .lst tr:active{background:var(--w-bg2)}
+ #nagi .tbk:active,#nagi .mm button:active{background:var(--w-bg2)}
+}

@@ -56,7 +56,7 @@ var A={
  modalOpen:function(){return !!(window.modal&&modal.busy)}
 };
 function auto(){var h=new Date().getHours()+new Date().getMinutes()/60;return h>=17.5||h<6?'yugure':'paper'}
-function apply(){var t=A.theme();if(t=='sky')t=auto();var c=t=='yugure'?'fz f z':'fy f y';var h=document.documentElement,keep=h.classList.contains('nagi-classic');h.className=c+(keep?' nagi-classic':'')+' nagi';try{localStorage.cpp_thm=c}catch(e){}}
+function apply(){var t=A.theme();if(t=='sky')t=auto();var c=t=='yugure'?'fz f z':'fy f y';var h=document.documentElement,keep=h.classList.contains('nagi-classic');var app=h.classList.contains('nagi-app');h.className=c+(keep?' nagi-classic':'')+(app?' nagi-app':'')+' nagi';try{localStorage.cpp_thm=c}catch(e){}}
 apply();setInterval(function(){if(A.theme()=='sky')apply()},60000);
 window.NagiCpp=A;
 function boot(){
