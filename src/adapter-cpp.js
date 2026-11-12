@@ -54,6 +54,10 @@ var A={
    return post('/?share',JSON.stringify({k:k,vp:paths.map(function(p){return dec(p)}),pw:o.pw||'',exp:String(o.exp),perms:o.perms||['read']}),'text/plain').then(function(t){var m=/created share:\s*(\S+)/.exec(t);if(!m)throw new Error(t.slice(0,160));return m[1]})},
  mkdir:function(dir,name){var fd=new FormData();fd.append('act','mkdir');fd.append('name',name);return post(dir,fd)},
  rename:function(x,n){var isd=/\/$/.test(x.path),base=x.path.replace(/[^\/]+\/?$/,''),dst=base+encodeURIComponent(n)+(isd?'/':'');return post(x.path+'?move='+dst)},
+ /* v3t: dest is a folder path (trailing slash). copyparty wants the full new vpath including the name. */
+ _dest:function(x,dir){var isd=/\/$/.test(x.path),base=(dir||'/').replace(/\/?$/,'/') ;return base+encodeURIComponent(x.name)+(isd?'/':'')},
+ move:function(x,dir){return post(x.path+'?move='+A._dest(x,dir))},
+ copy:function(x,dir){return post(x.path+'?copy='+A._dest(x,dir))},
  del:function(list){return list.reduce(function(p,x){return p.then(function(){return post(x.path+'?delete')})},Promise.resolve())},
  pickFiles:function(){ensureCpp(function(){var e=upInput(false);if(e)e.click()})},
  pickFolder:function(){ensureCpp(function(){var e=upInput(true);if(e)e.click()})},
@@ -91,10 +95,13 @@ window.NagiCpp=A;
   A.prefetch=function(path){if(!path)return;var k=path+'\0'+(A.dots&&A.dots()?'1':'0');if(C[k]&&C[k].d&&Date.now()-C[k].t<TTL)return;A.ls(path)};
   A.invalidate=function(path){if(!path){C={};return}Object.keys(C).forEach(function(k){if(k===path||k.indexOf(path)===0||path.indexOf(k)===0)delete C[k]})};
 })();
-(function(){var mk=A.mkdir,rn=A.rename,dl=A.del;
+(function(){var mk=A.mkdir,rn=A.rename,dl=A.del,mv=A.move,cp=A.copy;
+  function parent(p){return (p||'/').replace(/[^\/]+\/?$/,'')||'/'}
   A.mkdir=function(dir,name){return mk(dir,name).then(function(r){A.invalidate(dir);return r})};
-  A.rename=function(x,n){return rn(x,n).then(function(r){A.invalidate(x.path);return r})};
-  A.del=function(list){return dl(list).then(function(r){list.forEach(function(x){A.invalidate(x.path)});return r})};
+  A.rename=function(x,n){return rn(x,n).then(function(r){A.invalidate(parent(x.path));return r})};
+  A.del=function(list){return dl(list).then(function(r){list.forEach(function(x){A.invalidate(parent(x.path))});return r})};
+  A.move=function(x,dir){return mv(x,dir).then(function(r){A.invalidate(parent(x.path));A.invalidate(dir);return r})};
+  A.copy=function(x,dir){return cp(x,dir).then(function(r){A.invalidate(dir);return r})};
 })();
 
 

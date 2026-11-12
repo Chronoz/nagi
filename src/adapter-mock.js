@@ -58,6 +58,13 @@ var A={rootName:'Everything',user:'tri',
  share:function(paths){return new Promise(function(r){setTimeout(function(){r('https://nagi.local/shr/'+Math.random().toString(36).slice(2,9)+'/')},500)})},
  mkdir:function(dir,name){mkdir(dir,name,now);return Promise.resolve()},
  rename:function(x,n){var d=x.path.replace(/[^\/]+\/?$/,'');var t=T[d];[t.dirs,t.files].forEach(function(l){l.forEach(function(e){if(e.path==x.path){e.name=n;e.path=d+encodeURIComponent(n)+(e.isDir?'/':'')}})});return Promise.resolve()},
+ _take:function(x){var d=x.path.replace(/[^\/]+\/?$/,'')||'/',t=T[d],found=null;
+   t.dirs=t.dirs.filter(function(e){if(e.path==x.path)found=e;return e.path!=x.path});
+   t.files=t.files.filter(function(e){if(e.path==x.path)found=e;return e.path!=x.path});return found},
+ move:function(x,dir){dir=dir.replace(/\/?$/,'/') ;var e=A._take(x);if(!e)return Promise.reject(new Error('missing'));
+   e.path=dir+encodeURIComponent(e.name)+(e.isDir?'/':'');(e.isDir?T[dir].dirs:T[dir].files).push(e);if(e.isDir){T[e.path]=T[e.path]||T[x.path]||{dirs:[],files:[]}}return Promise.resolve()},
+ copy:function(x,dir){dir=dir.replace(/\/?$/,'/') ;var e={name:x.name,path:dir+encodeURIComponent(x.name)+(x.isDir?'/':''),size:x.size,ts:x.ts,tags:x.tags||{},isDir:x.isDir,count:x.count,type:x.type};
+   (e.isDir?T[dir].dirs:T[dir].files).push(e);if(e.isDir)T[e.path]={dirs:[],files:[]};return Promise.resolve()},
  del:function(list){list.forEach(function(x){var d=x.path.replace(/[^\/]+\/?$/,''),t=T[d];t.dirs=t.dirs.filter(function(e){return e.path!=x.path});t.files=t.files.filter(function(e){return e.path!=x.path})});return Promise.resolve()},
  pickFiles:function(){pick(false)},pickFolder:function(){pick(true)},
  onDrop:function(e){e.preventDefault();if(e.dataTransfer&&e.dataTransfer.files.length)queue([].slice.call(e.dataTransfer.files))},

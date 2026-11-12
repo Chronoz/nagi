@@ -2,7 +2,7 @@
    window.NagiApp.start(adapter). The adapter supplies data (real copyparty or the fictional mockup). */
 (function(){
 "use strict";
-var G=window.NagiGarden,A,root,$={},st={path:'/',data:null,kids:{},sel:[],view:localStorage.nagi_view||'garden',sheet:null,hover:null,ups:[],q:[],qi:-1,lb:null,cells:[]};
+var G=window.NagiGarden,A,root,$={},st={path:'/',data:null,kids:{},sel:[],view:localStorage.nagi_view||'garden',sheet:null,hover:null,ups:[],q:[],qi:-1,lb:null,cells:[],clip:null};
 var RM=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function ic(n,c){return '<i class="ni ni-'+n+(c?' '+c:'')+'" style="--ni:var(--ni-'+n+')"></i>'}
@@ -204,12 +204,14 @@ function find(p){return st.data.items.filter(function(x){return x.path==p})[0]}
 function btn(label,cls,fn,icn){var b=el('<button class="btn '+(cls||'')+'">'+(icn?ic(icn):'')+esc(label)+'</button>');b.onclick=fn;return b}
 // actions live in the top bar (quiet, with key hints); the mobile drawer gets the same list as buttons.
 // Keys avoid copyparty's own hotkeys (A B C D E F G I J K L M O P R S T U V X Y, digits): shift+letter.
-var KEYS={U:'⇧U',S:'⇧S',N:'⇧N',P:'⇧P'};
+var KEYS={U:'⇧U',S:'⇧S',N:'⇧N',P:'⇧P',M:'⇧M',C:'⇧C',V:'⇧V',X:'⇧X'};
 function actList(sel){var L=[],can=A.perms(),k=kindOf(sel);
   if(!sel.length){
     if(can.write)L.push({t:'Upload',i:'upload',k:'U',f:function(){openSheet('upload')},main:1});
     L.push({t:'Download all',i:'download',k:'S',f:confirmAll});
     if(can.write)L.push({t:'New folder',i:'plus',k:'N',f:newFolder});
+    if(st.clip&&st.clip.items&&st.clip.items.length&&(st.clip.mode=='copy'?can.write:can.move&&can.write))
+      L.push({t:(st.clip.mode=='copy'?'Paste':'Move')+' '+st.clip.items.length+(st.clip.items.length==1?' item':' items')+' here',i:st.clip.mode=='copy'?'clipboard-paste':'folder',k:'V',f:function(){doPaste(st.path)}});
     var au=st.data.items.filter(function(x){return x.type=='audio'});
     if(au.length>1)L.push({t:'Play all '+au.length,i:'play',k:'P',f:function(){playList(au,0)}});
     if(A.canShare())L.push({t:'Share folder',i:'link',f:function(){openSheet('share',[st.path])}});
@@ -219,6 +221,8 @@ function actList(sel){var L=[],can=A.perms(),k=kindOf(sel);
   else if(k=='image')L.push({t:one?'View':'View '+sel.length,i:'eye',f:function(){lbOpen(sel,0)},main:1});
   else if(one&&one.isDir)L.push({t:'Open',i:'folder-open',f:function(){go(one.path)},main:1});
   else if(one&&(one.type=='video'||one.type=='doc'||one.type=='code'))L.push({t:one.type=='video'?'Watch':'Read',i:one.type=='video'?'play':'file-text',f:function(){open(one)},main:1});
+  if(can.move)L.push({t:'Move to…',i:'folder',k:'X',f:function(){openSheet('move',{mode:'move',items:sel})}});
+  L.push({t:'Copy to…',i:'copy',k:'C',f:function(){openSheet('move',{mode:'copy',items:sel})}});
   L.push({t:one&&!one.isDir?'Download':'Download '+sel.length,i:'download',k:'S',f:function(){download(sel)}});
   if(A.canShare())L.push({t:'Share',i:'link',f:function(){openSheet('share',sel.map(function(x){return x.path}))}});
   if(one&&can.move)L.push({t:'Rename',i:'pencil',f:function(){rename(one)}});
@@ -232,7 +236,7 @@ function renderActs(sel){var a=$.acts,b=$.acts2,fa=$.fa;a.innerHTML='';b.innerHT
   var can=A.perms(),tabs=[],rest=[],T=function(t,i,f,c){return {t:t,i:i,f:f,cls:c||''}};
   if(!sel.length){tabs.push(T('Search','search',function(){openSheet('search')}));if(can.write)tabs.push(T('Upload','upload',function(){openSheet('upload')}));tabs.push(T('Settings','settings-2',function(){openSheet('settings')}));
     L.forEach(function(o){if(o.i!='upload')rest.push(o)})}
-  else{tabs.push(T('Clear','x',function(){st.sel=[];refresh()},'clr'));var acts=L.filter(function(o){return o.i!='x'});tabs=tabs.concat(acts.slice(0,acts.length>4?2:3).map(function(o){return T(o.t.replace(/^Download \d+$/,'Download'),o.i,o.f,o.danger?'danger':'')}));rest=acts.slice(acts.length>4?2:3)}
+  else{tabs.push(T('Clear','x',function(){st.sel=[];refresh()},'clr'));var acts=L.filter(function(o){return o.i!='x'});tabs=tabs.concat(acts.slice(0,acts.length>4?2:3).map(function(o){return T(o.t.replace(/^Download \d+$/,'Download').replace(/^Move to…$/,'Move').replace(/^Copy to…$/,'Copy'),o.i,o.f,o.danger?'danger':'')}));rest=acts.slice(acts.length>4?2:3)}
   $.bb.innerHTML='';$.bb.classList.toggle('selm',!!sel.length);
   tabs.forEach(function(o){var b=el('<button class="bt '+o.cls+'">'+ic(o.i)+'<span>'+esc(o.t)+'</span>'+(o.cls=='clr'?'<b>'+sel.length+'</b>':'')+'</button>');b.onclick=function(){$.mm.classList.remove('on');o.f()};$.bb.appendChild(b)});
   if(!sel.length||rest.length){var mb=el('<button class="bt more" aria-haspopup="menu" aria-expanded="false">'+ic('ellipsis')+'<span>More</span></button>');mb.onclick=function(e){e.stopPropagation();var on=!$.mm.classList.contains('on');$.mm.classList.toggle('on',on);mb.setAttribute('aria-expanded',on)};$.bb.appendChild(mb)}
@@ -427,9 +431,11 @@ function render(anim){if(!st.data)return;if(!st.data.all)st.data.all=st.data.ite
   $.zoom.innerHTML=ghosts(gap)+svg;$.lbs.innerHTML=lbs;pondUp(cells);paintSel();
   bindThumbs($.zoom,{root:$.gd});
 }
-function paintSel(){var kc=window.NagiKoi&&NagiKoi.pond;if(kc&&st.pond){var pp=st.pond.item.path;kc.cv.classList.toggle('sel',st.sel.indexOf(pp)>=0);kc.cv.classList.toggle('pl',!!(st.q[st.qi]&&st.q[st.qi].path==pp))}[].forEach.call($.zoom.querySelectorAll('.cell'),function(g){var c=st.cells[g.dataset.i];if(!c)return;var p=c.item.path;g.classList.toggle('sel',st.sel.indexOf(p)>=0);g.classList.toggle('play',!!(st.q[st.qi]&&st.q[st.qi].path==p))});
-  [].forEach.call($.lbs.querySelectorAll('.lb'),function(l){var c=st.cells[l.dataset.i];l.classList.toggle('sl',!!c&&st.sel.indexOf(c.item.path)>=0);l.classList.toggle('pl',!!(c&&st.q[st.qi]&&st.q[st.qi].path==c.item.path));});
-  [].forEach.call($.chk.querySelectorAll('.row[data-p]'),function(r){r.classList.toggle('sel',st.sel.indexOf(r.dataset.p)>=0)});
+function clipHas(p){return !!(st.clip&&st.clip.mode=='cut'&&st.clip.items.some(function(x){return x.path==p}))}
+function paintSel(){var kc=window.NagiKoi&&NagiKoi.pond;if(kc&&st.pond){var pp=st.pond.item.path;kc.cv.classList.toggle('sel',st.sel.indexOf(pp)>=0);kc.cv.classList.toggle('pl',!!(st.q[st.qi]&&st.q[st.qi].path==pp));kc.cv.classList.toggle('cut',clipHas(pp))}[].forEach.call($.zoom.querySelectorAll('.cell'),function(g){var c=st.cells[g.dataset.i];if(!c)return;var p=c.item.path;g.classList.toggle('sel',st.sel.indexOf(p)>=0);g.classList.toggle('play',!!(st.q[st.qi]&&st.q[st.qi].path==p));g.classList.toggle('cut',clipHas(p))});
+  [].forEach.call($.lbs.querySelectorAll('.lb'),function(l){var c=st.cells[l.dataset.i];l.classList.toggle('sl',!!c&&st.sel.indexOf(c.item.path)>=0);l.classList.toggle('pl',!!(c&&st.q[st.qi]&&st.q[st.qi].path==c.item.path));l.classList.toggle('cut',!!c&&clipHas(c.item.path));});
+  [].forEach.call($.chk.querySelectorAll('.row[data-p]'),function(r){r.classList.toggle('sel',st.sel.indexOf(r.dataset.p)>=0);r.classList.toggle('cut',clipHas(r.dataset.p))});
+  [].forEach.call(root.querySelectorAll('.lst tr.r[data-p]'),function(r){r.classList.toggle('cut',clipHas(r.dataset.p))});
   var tl=$.stage.querySelector('.lst');if(tl)[].forEach.call(tl.querySelectorAll('tr.r'),function(r){r.classList.toggle('sel',st.sel.indexOf(r.dataset.p)>=0)})}
 function hl(p,on){[].forEach.call($.zoom.querySelectorAll('.cell'),function(g){var c=st.cells[g.dataset.i];g.classList.toggle('dim',!!on&&c&&c.item.path!=p)});
   [].forEach.call($.chk.querySelectorAll('.row'),function(r){r.classList.toggle('hov',!!on&&r.dataset.p==p)})}
@@ -529,7 +535,111 @@ function closeSheet(){if(!st.sheet)return;st.sheet=null;$.sheet.classList.remove
 function dlb(k){return '<button class="ib sm dl" aria-label="Download" title="Download'+(k?' (⇧S)':'')+'">'+ic('download')+'</button>'}
 function head(t,p,dl){return '<div class="sh-h"><div><div class="sh-t"><h3>'+t+'</h3>'+(dl?dlb(1):'')+'</div>'+(p?'<p>'+p+'</p>':'')+'</div><button class="ib sh-x" aria-label="Close" title="Close (Esc)">'+ic('x')+'</button></div>'}
 function topo(w,h){var poly=G.roundRect(4,4,w-8,h-8,18),r=G.contours(poly,18,11,[w*.78,h*.3],40);return '<svg class="topo" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none">'+r.map(function(d){return '<path d="'+d+'" fill="none" stroke="currentColor" stroke-opacity=".28" stroke-width=".8"/>'}).join('')+'</svg>'}
+
+/* ---------- v3t: move / copy ---------- */
+function parentPath(p){return (p||'/').replace(/[^\/]+\/?$/,'')||'/'}
+function normPath(p){p=p||'/';return p=='/'?'/':p.replace(/\/?$/,'/')}
+function samePath(a,b){return normPath(a)===normPath(b)}
+function isInside(parent,child){var p=normPath(parent),c=normPath(child);return c!==p&&c.indexOf(p)===0}
+function mvRecent(){try{return JSON.parse(localStorage.nagi_mv_recent||'[]')}catch(e){return []}}
+function mvRemember(p){p=normPath(p);if(!p||p=='/')return;var r=mvRecent().filter(function(x){return !samePath(x,p)});r.unshift(p);try{localStorage.nagi_mv_recent=JSON.stringify(r.slice(0,6))}catch(e){}}
+function mvMsg(e,x,dest){var m=String((e&&e.message)||e||'');
+  if(/target file exists/i.test(m))return 'A file named “'+x.name+'” is already in '+title(dest)+'.';
+  if(/parent into subfolder/i.test(m))return 'Cannot move a folder into itself.';
+  if(/mountpoint/i.test(m))return 'That is a volume mount and cannot be moved.';
+  if(/403|not allowed|authenticate/i.test(m))return 'You do not have permission to do that.';
+  return m.replace(/^(mv2?|cp2?):\s*/i,'')||'Could not finish.'}
+function placeBlock(items,dest,mode){dest=normPath(dest);
+  for(var i=0;i<items.length;i++){var x=items[i];
+    if(x.isDir&&(samePath(x.path,dest)||isInside(x.path,dest)))return 'Cannot '+(mode=='copy'?'copy':'move')+' “'+x.name+'” into itself.';
+  }
+  if(items.length&&samePath(parentPath(items[0].path),dest)&&mode!='copy')return 'already';
+  return null}
+function setClip(mode,items){st.clip={mode:mode,items:items.slice(),from:st.path};refresh();
+  var n=items.length,w=n==1?'“'+items[0].name+'”':n+' items';
+  upNote((mode=='copy'?'Copied ':'Cut ')+w+'. Open a folder and paste.')}
+function clearClip(silent){if(!st.clip)return;st.clip=null;refresh();if(!silent)upNote('Cleared the clipboard.')}
+function doPaste(dest,mode){
+  var clip=st.clip;if(!clip||!clip.items||!clip.items.length){upNote('Nothing to paste.',true);return}
+  var md=mode||clip.mode;
+  runPlace(md,clip.items,dest,function(){if(md=='cut')st.clip=null})}
+function runPlace(mode,items,dest,done){
+  dest=normPath(dest);var blk=placeBlock(items,dest,mode);
+  if(blk=='already'){upNote('Those items are already here.',true);return}
+  if(blk){upNote(blk,true);return}
+  var ok=0,fail=0,last='';
+  function next(i){
+    if(i>=items.length){
+      if(A.invalidate){A.invalidate(parentPath(items[0].path));A.invalidate(dest)}
+      mvRemember(dest);st.sel=[];
+      var verb=mode=='copy'?'Copied':'Moved';
+      var msg=fail&&ok?verb+' '+ok+', '+fail+' could not: '+last:fail?last:verb+' '+(ok==1?'“'+items[0].name+'”':ok+' items')+' to '+title(dest)+'.';
+      load(st.path,function(d){st.data=d;render(true);upNote(msg,!!fail)});
+      if(done)done();
+      return}
+    var x=items[i],fn=mode=='copy'?A.copy:A.move;
+    if(!fn){upNote('This server cannot '+(mode=='copy'?'copy':'move')+' files.',true);return}
+    fn(x,dest).then(function(){ok++;next(i+1)},function(e){fail++;last=mvMsg(e,x,dest);next(i+1)})}
+  next(0)}
+
 var SHEETS={
+ move:function(s,arg){arg=arg||{};var mode=arg.mode=='copy'?'copy':'move',items=arg.items||[],here=normPath(st.path),cur=here;
+  var verb=mode=='copy'?'Copy':'Move',n=items.length,who=n==1?'“'+esc(items[0].name)+'”':n+' items';
+  s.classList.add('mv');
+  s.innerHTML=head(verb+' to…','Choose a folder for '+who+'.')+
+    '<div class="sh-b">'+
+      '<div class="mv-crumb crumb" role="navigation" aria-label="Folder"></div>'+
+      '<div class="mv-recent"></div>'+
+      '<div class="mv-list" role="list"></div>'+
+      '<div class="mv-new" hidden><label class="field"><input type="text" aria-label="New folder name" placeholder="Folder name"><button class="btn fill sm mk">Create</button><button class="btn quiet sm mkx">Cancel</button></label></div>'+
+      '<p class="hint mv-why">In the same volume this is a rename, which is safe for Dropbox. Across volumes, copyparty may copy first — that can download online-only files.</p>'+
+    '</div>'+
+    '<div class="mv-foot"><button class="btn quiet mv-nf">'+ic('plus')+' New folder</button><span class="sp"></span><button class="btn fill mv-go" disabled>'+verb+' here</button></div>';
+  var crumb=s.querySelector('.mv-crumb'),list=s.querySelector('.mv-list'),rec=s.querySelector('.mv-recent');
+  var goBtn=s.querySelector('.mv-go'),nfBtn=s.querySelector('.mv-nf'),nfBox=s.querySelector('.mv-new'),nfInp=nfBox.querySelector('input');
+  function crumbs(p){var parts=[{p:'/',n:A.rootName||'Everything'}],acc='/';
+    (p||'/').replace(/^\/|\/$/g,'').split('/').filter(Boolean).forEach(function(seg){acc+=seg+'/';parts.push({p:acc,n:decodeURIComponent(seg)})});
+    crumb.innerHTML=parts.map(function(x,i){return (i?'<span class="s">/</span>':'')+'<a href="#" data-p="'+esc(x.p)+'">'+esc(x.n)+'</a>'}).join('');
+    [].forEach.call(crumb.querySelectorAll('a'),function(a){a.onclick=function(e){e.preventDefault();browse(a.getAttribute('data-p'))}})}
+  function recent(){var rs=mvRecent().filter(function(p){return !samePath(p,cur)});
+    if(!rs.length){rec.innerHTML='';return}
+    rec.innerHTML='<div class="lab">Recent</div>'+rs.map(function(p){return '<button type="button" class="mv-r" data-p="'+esc(p)+'">'+ic('history')+'<span>'+esc(p=='/'?(A.rootName||'Everything'):title(p))+'</span></button>'}).join('');
+    [].forEach.call(rec.querySelectorAll('.mv-r'),function(b){b.onclick=function(){browse(b.getAttribute('data-p'))}})}
+  function updateGo(perms){
+    var write=perms&&perms.indexOf('write')>=0,blk=placeBlock(items,cur,mode),alr=blk=='already';
+    goBtn.disabled=!write||!!blk;
+    goBtn.textContent=verb+' here';
+    nfBtn.disabled=!write;
+    nfBtn.title=write?'':'You cannot write in this folder.';
+    if(!write)goBtn.title='You cannot write in this folder.';
+    else if(alr)goBtn.title='Those items are already here.';
+    else if(blk)goBtn.title=blk;
+    else goBtn.title='';
+  }
+  function browse(p){p=normPath(p);cur=p;crumbs(p);list.innerHTML='<p class="hint">Opening…</p>';goBtn.disabled=true;
+    A.ls(p).then(function(d){
+      var dirs=(d.dirs||[]).slice().sort(function(a,b){return a.name.localeCompare(b.name)});
+      if(!dirs.length)list.innerHTML='<p class="hint">No folders in '+esc(title(p))+'. You can still '+(mode=='copy'?'copy':'move')+' here, or make a new one.</p>';
+      else list.innerHTML=dirs.map(function(x){
+        var blocked=x.isDir&&items.some(function(it){return it.isDir&&(samePath(it.path,x.path)||isInside(it.path,x.path))});
+        return '<button type="button" class="mv-dir'+(blocked?' off':'')+'" data-p="'+esc(x.path)+'" '+(blocked?'disabled':'')+' role="listitem">'+ic('folder')+'<span>'+esc(x.name)+'</span>'+ic('chevron-right')+'</button>';
+      }).join('');
+      [].forEach.call(list.querySelectorAll('.mv-dir:not(.off)'),function(b){b.onclick=function(){browse(b.getAttribute('data-p'))}});
+      var perms=d.perms||[];
+      if(typeof perms==='object'&&!Array.isArray(perms)){perms=[];if(d.perms.write)perms.push('write');if(d.perms.move)perms.push('move')}
+      /* ls() on the real adapter returns the raw array from copyparty */
+      if(d.perms&&d.perms.write===undefined&&Array.isArray(d.perms))perms=d.perms;
+      updateGo(perms);recent();
+    },function(e){list.innerHTML='<p class="hint">Could not open this folder.</p>';updateGo([])})}
+  goBtn.onclick=function(){if(goBtn.disabled)return;closeSheet();runPlace(mode,items,cur,function(){if(mode=='cut'||(st.clip&&st.clip.mode=='cut'))st.clip=null})};
+  nfBtn.onclick=function(){nfBox.hidden=false;nfInp.value='';setTimeout(function(){focusQuiet(nfInp)},50)};
+  nfBox.querySelector('.mkx').onclick=function(){nfBox.hidden=true};
+  nfBox.querySelector('.mk').onclick=function(){
+    var n=(nfInp.value||'').trim();if(!n)return;
+    A.mkdir(cur,n).then(function(){nfBox.hidden=true;browse(normPath(cur)+encodeURIComponent(n)+'/')},function(e){upNote(String(e.message||e),true)})};
+  nfInp.onkeydown=function(e){if(e.key=='Enter'){e.preventDefault();nfBox.querySelector('.mk').click()}};
+  browse(here)},
+
  upload:function(s){var where=title(st.path);
   s.innerHTML=head('Upload','Files go into <b style="font-weight:500;color:var(--n-ink)">'+esc(where)+'</b>.')+'<div class="sh-b">'+
    '<div class="drop">'+topo(384,230)+'<div class="big">'+ic('cloud-upload')+'</div><h4>Drop files or folders here</h4><p>or pick them from your computer. Each file grows into the garden as it arrives.</p>'+
@@ -664,10 +774,18 @@ function reload(){var p=st.path;st.kids={};load(p,function(d){st.data=d;render(t
 /* ---------- keys + drops ---------- */
 function keys(){addEventListener('keydown',function(e){
   if(A.modalOpen&&A.modalOpen())return;
+  if(document.documentElement.classList.contains('nagi-classic'))return;
   var t=e.target,typing=t&&(t.tagName=='INPUT'||t.tagName=='TEXTAREA'||t.isContentEditable);
   if(root.classList.contains('off'))return;
+  var mod=e.metaKey||e.ctrlKey;
+  if(mod&&!e.altKey&&!typing&&!st.sheet&&!st.pop&&!st.lb){
+    var k=(e.key||'').toLowerCase(),can=A.perms&&A.perms();
+    if(k=='x'&&can&&can.move){var sel=st.sel.map(find).filter(Boolean);if(sel.length){e.preventDefault();e.stopImmediatePropagation();setClip('cut',sel);return}}
+    if(k=='c'){var sel=st.sel.map(find).filter(Boolean);if(sel.length){e.preventDefault();e.stopImmediatePropagation();setClip('copy',sel);return}}
+    if(k=='v'&&st.clip){e.preventDefault();e.stopImmediatePropagation();doPaste(st.path);return}
+  }
   if(st.pop){if(e.key=='Escape'){popClose()}else if(e.key=='Enter'){e.preventDefault();st.pop.ok()}else if(e.key=='Tab'){e.preventDefault();var bs=st.pop.el.querySelectorAll('button'),i=[].indexOf.call(bs,document.activeElement);bs[(i+(e.shiftKey?bs.length-1:1))%bs.length].focus()}else return;e.stopImmediatePropagation();return}
-  if(e.key=='Escape'){if(st.lb)lbClose();else if(st.sheet)closeSheet();else if(st.sel.length){st.sel=[];refresh()}e.stopImmediatePropagation();return}
+  if(e.key=='Escape'){if(st.lb)lbClose();else if(st.sheet)closeSheet();else if(st.sel.length){st.sel=[];refresh()}else if(st.clip)clearClip();e.stopImmediatePropagation();return}
   if(typing){return}
   if(st.sheet=='ask'&&e.key=='Enter'){var ok=$.sheet.querySelector('.ok');if(ok){e.preventDefault();ok.click()}e.stopImmediatePropagation();return}
   var k=e.key,used=true;
