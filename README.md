@@ -16,6 +16,8 @@ Nagi is a skin for copyparty, a portable file server in one Python file. It only
 - **Koi pond = free space**: the disk's free space is a pond with koi swimming in it. It drops to 30 fps when you're idle and pauses when it's off screen
 - **Raked sand at the root**: the biggest stone at the top level gets sand rings around it
 - **Checklist + list view**: grouped by type (folders, video, audio, images, docs, code, archives), with folder icons. Press `G` to switch between garden and list
+- **Instant Back**: moving between folders does not reload the page. Recent folders (the garden as you left it, and where you had scrolled) are restored at once; the listing is rechecked quietly and only redrawn if it changed. If a sheet, the image viewer or the mobile drawer is open, Back closes that first. Signing out clears this memory. Private folders are never shown to a signed-out visitor from it.
+- **A quieter garden**: a phone shows at most eight stones, a wider screen twenty. The largest items are kept (same size-weighting as before, folders first on a tie). When there are more, a small patch of raked sand rings with a quiet “+N” opens the full list (and the drawer on a phone).
 - **Players**: a music player with a queue (artist/title come from tags), plus video, image lightbox and text/markdown viewers. The image viewer shows a light preview only (`?th=wf3`, never the original) and a quiet Download for the full file. Each viewer has a small download button next to the title. If you can write, you can Edit and Save `.md` and `.txt` notes right in the reader. Version history goes to the volume hist folder (`--md-hist v`), not next to the file
 - **Folder notes**: a folder with a `README.md` shows a short, sanitized note at the top of the listing; tap Show more to expand. Online-only (dataless) files are skipped and never opened
 - **Undo upload**: signed-in users with write access get a quiet “Undo upload” item under More. It lists your own recent uploads, including unfinished ones, and asks before deleting (Enter confirms, Esc cancels). Guests do not see it
@@ -73,10 +75,10 @@ copyparty -p 3979 -i 127.0.0.1 \
   -v /path/to/your/files:/:r:rwmda,alice \
   -v ./nagi/theme:/.nagi:r \
   --themes 12 --theme 11 --u2j 4 --md-hist v --rw-edit md,txt \
-  --css-browser '/.nagi/nagi.css?nagi=64bde67bce&cache=31536000' \
-  --js-browser  '/.nagi/nagi-late.js?nagi=69abc23cd0&cache=31536000' \
+  --css-browser '/.nagi/nagi.css?nagi=d9f0a17479&cache=31536000' \
+  --js-browser  '/.nagi/nagi-late.js?nagi=207c7f6159&cache=31536000' \
   --js-other    '/.nagi/nagi-pages.js?nagi=eab13f8d41&cache=31536000' \
-  --html-head-s '<link rel="stylesheet" href="/.nagi/nagi-pages.css?nagi=5c996510eb&cache=31536000"><link rel="manifest" href="/.nagi/manifest.json?nagi=b8ef2fba1e&cache=31536000"><link rel="apple-touch-icon" href="/.nagi/icon-180.png?nagi=88d99dbc9b&cache=31536000"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Nagi"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><script nonce="{{ js_nonce }}">(function(){var c="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",m=document.querySelector("meta[name=viewport]");if(m)m.setAttribute("content",c);else{m=document.createElement("meta");m.setAttribute("name","viewport");m.setAttribute("content",c);(document.head||document.documentElement).appendChild(m)}})();</script><script nonce="{{ js_nonce }}" src="/.nagi/nagi-early.js?nagi=b3e2c53135&cache=31536000"></script><script nonce="{{ js_nonce }}" src="/.nagi/nagi.js?nagi=c240a4b7fc&cache=31536000"></script>' \
+  --html-head-s '<link rel="stylesheet" href="/.nagi/nagi-pages.css?nagi=5c996510eb&cache=31536000"><link rel="manifest" href="/.nagi/manifest.json?nagi=b8ef2fba1e&cache=31536000"><link rel="apple-touch-icon" href="/.nagi/icon-180.png?nagi=88d99dbc9b&cache=31536000"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Nagi"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><script nonce="{{ js_nonce }}">(function(){var c="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",m=document.querySelector("meta[name=viewport]");if(m)m.setAttribute("content",c);else{m=document.createElement("meta");m.setAttribute("name","viewport");m.setAttribute("content",c);(document.head||document.documentElement).appendChild(m)}})();</script><script nonce="{{ js_nonce }}" src="/.nagi/nagi-early.js?nagi=b3e2c53135&cache=31536000"></script><script nonce="{{ js_nonce }}" src="/.nagi/nagi.js?nagi=fc3d556a38&cache=31536000"></script>' \
   --favico "凪 17282B EEE5D1" --no-robots
 ```
 
@@ -113,8 +115,8 @@ Prefer a config file? See [`examples/copyparty.conf`](examples/copyparty.conf), 
   u2j: 4
   md-hist: v
   rw-edit: md,txt
-  css-browser: /.nagi/nagi.css?nagi=64bde67bce&cache=31536000
-  js-browser: /.nagi/nagi-late.js?nagi=69abc23cd0&cache=31536000
+  css-browser: /.nagi/nagi.css?nagi=d9f0a17479&cache=31536000
+  js-browser: /.nagi/nagi-late.js?nagi=207c7f6159&cache=31536000
   js-other: /.nagi/nagi-pages.js?nagi=eab13f8d41&cache=31536000
   html-head-s: <link rel="stylesheet" href="/.nagi/nagi-pages.css?nagi=5c996510eb&cache=31536000"> …
 

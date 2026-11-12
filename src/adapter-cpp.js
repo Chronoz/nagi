@@ -107,7 +107,8 @@ window.NagiCpp=A;
 // v3m: remember folder listings for a short time, and let the garden prefetch on touch
 (function(){var C={},TTL=45000;
   var raw=A.ls;
-  A.ls=function(path){var k=path+'\0'+(A.dots&&A.dots()?'1':'0'),e=C[k];if(e&&e.d&&Date.now()-e.t<TTL)return Promise.resolve(e.d);if(e&&e.p)return e.p;
+  A.ls=function(path,force){var k=path+'\0'+(A.dots&&A.dots()?'1':'0'),e=C[k];
+    if(!force&&e&&e.d&&Date.now()-e.t<TTL)return Promise.resolve(e.d);if(!force&&e&&e.p)return e.p;
     var p=raw(path).then(function(d){C[k]={t:Date.now(),d:d};return d},function(err){if(C[k]&&C[k].p)delete C[k];throw err});
     C[k]={t:0,p:p};return p};
   A.prefetch=function(path){if(!path)return;var k=path+'\0'+(A.dots&&A.dots()?'1':'0');if(C[k]&&C[k].d&&Date.now()-C[k].t<TTL)return;A.ls(path)};
