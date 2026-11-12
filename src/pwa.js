@@ -18,7 +18,7 @@
   // theme-color follows the Nagi light (paper / yūgure) so the status bar matches the page
   var tc=tag('meta','name','theme-color',{content:'#F1EADB'});
   function sync(){syncVp();var dark=/\bfz\b/.test(document.documentElement.className);tc.setAttribute('content',dark?'#0F1D1E':'#F1EADB')}
-  sync();try{new MutationObserver(sync).observe(document.documentElement,{attributes:true,attributeFilter:['class']})}catch(e){}
+  sync();try{new MutationObserver(function(){sync();if(window.NagiFit)NagiFit();else if(typeof fit==='function')fit()}).observe(document.documentElement,{attributes:true,attributeFilter:['class']})}catch(e){}
   var standalone=navigator.standalone===true||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches);
   document.documentElement.classList.toggle('nagi-app',!!standalone);
   // a service worker needs a secure context (https or localhost); over plain http (tailscale) we simply do without
@@ -32,20 +32,35 @@
   // lower. Nagi owns the whole screen, so keep the document pinned at 0,0 and size the app to the real viewport.
   var R=document.documentElement;function app(){return R.classList.contains('nagi')&&!R.classList.contains('nagi-classic')}
   function typing(){var a=document.activeElement;return a&&(a.tagName=='INPUT'||a.tagName=='TEXTAREA'||a.isContentEditable)}
-  /* v3r: never write a keyboard-shrunk innerHeight into --nagi-h. On a
-     home-screen iOS app the first focus shrinks innerHeight to about half the
-     screen; that used to collapse #nagi (and hide the bottom bar) under the
-     already-misplaced first-open search sheet. typing() used to skip only the
-     scroll reset. On blur, the delayed fit() below restores full height. */
-  function fit(){if(!app())return;if(typing())return;R.style.setProperty('--nagi-h',window.innerHeight+'px');
+  /* v3s: early nagi.js runs before browser.js, which later overwrites
+     documentElement.className (theme + "read write") and would drop our
+     "nagi" class — without it, fit() no-ops and html.nagi rules never apply.
+     Re-add it whenever it disappears. */
+  function keepNagi(){if(!(window.__nagiStarted||document.getElementById('nagi')))return;if(!R.classList.contains('nagi'))R.classList.add('nagi')}
+  /* v3r: never write a keyboard-shrunk height into --nagi-h. Prefer the
+     visual viewport (the pixels actually on screen) over innerHeight, which
+     can disagree after an early viewport-meta snap. typing() still skips. */
+  function vv(){var v=window.visualViewport;return (v&&v.height>100)?v.height:window.innerHeight}
+  function fit(){keepNagi();if(!app())return;if(typing())return;R.style.setProperty('--nagi-h',vv()+'px');
     if(window.scrollY||window.scrollX||(document.body&&document.body.scrollTop)||R.scrollTop){window.scrollTo(0,0);if(document.body)document.body.scrollTop=0;R.scrollTop=0}
     var w=document.querySelector('#nagi .win');if(w&&w.scrollTop)w.scrollTop=0}
   ['resize','orientationchange','pageshow','load','scroll'].forEach(function(t){addEventListener(t,fit,{passive:true})});
   if(window.visualViewport){visualViewport.addEventListener('resize',fit);visualViewport.addEventListener('scroll',fit)}
   document.addEventListener('focusout',function(){setTimeout(fit,60);setTimeout(fit,400)});
-  fit();setTimeout(fit,300);setTimeout(fit,1200);
+  function startFit(){fit();setTimeout(fit,300);setTimeout(fit,1200)}
+  if(document.body)startFit();else{var _mo=new MutationObserver(function(){if(document.body){_mo.disconnect();startFit()}});_mo.observe(R,{childList:true,subtree:true})}
+  window.NagiFit=fit;
   // iOS only applies :active (our press states) when the page listens for touches
   document.addEventListener('touchstart',function(){},{passive:true});
   if(!standalone&&'ontouchstart' in window){var E=14,UI='button,a,input,select,textarea,label,summary,[role],.cell,.row,.bb,.mm,.sheet,.lbx,.np,.ctx,.tb';
     document.addEventListener('touchstart',function(e){if(e.touches.length!==1)return;var t=e.touches[0],el=e.target;if(t.clientX>=E&&t.clientX<=innerWidth-E)return;if(el&&el.closest&&el.closest(UI))return;e.preventDefault()},{passive:false})}
+
+  /* v3s: Newsreader / italic / Plex are not on the first garden screen — load them
+     on demand (sheets, login, idle) so first paint does not wait on 190 KB+ of serif. */
+  var DF=B+'nagi-fonts-defer.css?nagi=__NAGI_DF__&cache=31536000';
+  window.NagiDeferFonts=function(){if(window.__nagiDf||!document.head)return;window.__nagiDf=1;var l=document.createElement('link');l.rel='stylesheet';l.href=DF;document.head.appendChild(l)};
+  if(!document.getElementById('ht_brw')){
+    if(document.readyState=='loading')document.addEventListener('DOMContentLoaded',function(){window.NagiDeferFonts()});
+    else window.NagiDeferFonts();
+  }
 })();

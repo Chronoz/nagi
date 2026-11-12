@@ -2,7 +2,13 @@
    Data: the ?ls JSON API. Uploads: copyparty's own up2k engine. Share/mkdir/move/delete: copyparty's POST endpoints. */
 (function(){
 "use strict";
-if(!document.getElementById('ht_brw')||!window.fetch)return;
+if(window.__nagiCppInit)return;
+if(!window.fetch)return;
+/* ht_brw is the <html> id on the file browser — present from the first byte, even in <head>.
+   If this file ran as an early async load before body, wait for document.body (see whenBody). */
+if(!document.getElementById('ht_brw'))return;
+window.__nagiCppInit=1;
+if(document.currentScript&&document.currentScript.nonce)window.__nagiNonce=document.currentScript.nonce;
 var last={perms:[],acct:'*',cfg:{}};
 if(/[?&]pw=x\b/.test(location.search))try{history.replaceState(null,'',location.pathname)}catch(e){}
 function here(){var p=location.pathname;return p.endsWith('/')?p:p.replace(/[^\/]*$/,'')}
@@ -49,12 +55,12 @@ var A={
  mkdir:function(dir,name){var fd=new FormData();fd.append('act','mkdir');fd.append('name',name);return post(dir,fd)},
  rename:function(x,n){var isd=/\/$/.test(x.path),base=x.path.replace(/[^\/]+\/?$/,''),dst=base+encodeURIComponent(n)+(isd?'/':'');return post(x.path+'?move='+dst)},
  del:function(list){return list.reduce(function(p,x){return p.then(function(){return post(x.path+'?delete')})},Promise.resolve())},
- pickFiles:function(){var e=upInput(false);if(e)e.click()},
- pickFolder:function(){var e=upInput(true);if(e)e.click()},
+ pickFiles:function(){ensureCpp(function(){var e=upInput(false);if(e)e.click()})},
+ pickFolder:function(){ensureCpp(function(){var e=upInput(true);if(e)e.click()})},
  // always feed drops into up2k's upload path (not the 'search' drop-zone; that is chosen by Y on a bare body drop)
  onDrop:function(e){try{e.preventDefault();e.stopPropagation()}catch(_){}
-   var fn=document.body.ondrop,dz=document.getElementById('up_dz')||{getAttribute:function(){return 'up_dz'}};
-   if(typeof fn==='function')fn.call(dz,e);},
+   ensureCpp(function(){var fn=document.body.ondrop,dz=document.getElementById('up_dz')||{getAttribute:function(){return 'up_dz'}};
+     if(typeof fn==='function')fn.call(dz,e)})},
 
  uploads:function(){var u=window.up2k;if(!u||!u.ui||!u.ui.tab||!u.st)return [];var fl=u.st.files;
    return u.ui.tab.map(function(t,i){var f=fl[i]||{},hp=String(t.hp||''),m=/([\d.]+)%,\s*([^,]+),\s*([\d.]+)\s*MiB/.exec(hp),state=t.in=='ok'?'ok':t.in=='ng'?'ng':t.in=='q'&&!t.bd&&!t.nh?'q':'run';
@@ -69,11 +75,11 @@ var A={
    {label:'If a file already exists',choices:['Keep both (new name)','Replace if mine is newer','Replace if different','Skip it'],value:ow,set:function(v){for(var i=0;i<4&&(parseInt(localStorage.u2ow||'0',10)||0)!=v;i++)tg('u2ow')}}]},
  theme:function(){var t=localStorage.nagi_theme;if(t)return t;return /\bfz\b/.test(document.documentElement.className)?'yugure':'paper'},
  setTheme:function(t){localStorage.nagi_theme=t;apply()},
- classic:function(){document.documentElement.classList.add('nagi-classic');localStorage.nagi_classic='1'},
+ classic:function(){ensureCpp(function(){document.documentElement.classList.add('nagi-classic');localStorage.nagi_classic='1'})},
  modalOpen:function(){return !!(window.modal&&modal.busy)}
 };
 function auto(){var h=new Date().getHours()+new Date().getMinutes()/60;return h>=17.5||h<6?'yugure':'paper'}
-function apply(){var t=A.theme();if(t=='sky')t=auto();var c=t=='yugure'?'fz f z':'fy f y';var h=document.documentElement,keep=h.classList.contains('nagi-classic');var app=h.classList.contains('nagi-app');h.className=c+(keep?' nagi-classic':'')+(app?' nagi-app':'')+' nagi';try{localStorage.cpp_thm=c}catch(e){}}
+function apply(){var t=A.theme();if(t=='sky')t=auto();var c=t=='yugure'?'fz f z':'fy f y';var h=document.documentElement;['fz','fy','z','y'].forEach(function(x){h.classList.remove(x)});c.split(/\s+/).forEach(function(x){if(x)h.classList.add(x)});h.classList.add('nagi');if(localStorage.nagi_classic=='1')h.classList.add('nagi-classic');try{localStorage.cpp_thm=c}catch(e){}if(window.NagiFit)try{NagiFit()}catch(e){}}
 apply();setInterval(function(){if(A.theme()=='sky')apply()},60000);
 window.NagiCpp=A;
 // v3m: remember folder listings for a short time, and let the garden prefetch on touch
@@ -91,18 +97,54 @@ window.NagiCpp=A;
   A.del=function(list){return dl(list).then(function(r){list.forEach(function(x){A.invalidate(x.path)});return r})};
 })();
 
-function boot(){
-  if(localStorage.nagi_classic=='1')document.documentElement.classList.add('nagi-classic');
-  window.NagiApp.start(A);
-  // v3g: copyparty's toasts stay small (bridge.css) and short; the upload summary is replaced by Nagi's own quiet note
-  var T=window.toast;if(T&&T.show&&!T._nagi){var orig=T.show;T._nagi=1;T.show=function(cl,sec,txt,tag){
+
+/* v3s: copyparty's browser.js / baguettebox / up2k stay out of the first-paint path
+   when nagi-early.js successfully defers them. Load on idle after the garden is up,
+   or immediately on first upload / Classic / drop. If deferral did not take (the
+   parser ran the tags anyway), this is a no-op once those globals exist. */
+function cppReady(){return !!(window.up2k&&window.treectl)}
+function hookToast(){var T=window.toast;if(T&&T.show&&!T._nagi){var orig=T.show;T._nagi=1;T.show=function(cl,sec,txt,tag){
     if(!document.documentElement.classList.contains('nagi-classic')){var s=String(txt||''),c=String(cl||'');
       if(/\n\n[^\n]* @ [^\n]*\/s$/.test(s))return;
       if(sec>0)sec=/^ok/.test(c)?Math.min(sec,2):/^inf/.test(c)?Math.min(sec,4):Math.min(sec,8)}
-    return orig.call(T,cl,sec,txt,tag)}}
-  var back=document.createElement('button');back.id='nagi-back';back.innerHTML='<i class="ni" style="--ni:var(--ni-wand-sparkles)"></i>Back to Nagi';back.onclick=function(){document.documentElement.classList.remove('nagi-classic');localStorage.nagi_classic='';NagiApp.refresh()};document.body.appendChild(back);
+    return orig.call(T,cl,sec,txt,tag)}}}
+function flushCppWaiters(){hookToast();try{apply()}catch(e){}var w=(window.__nagiCpp&&window.__nagiCpp.waiters)||[];if(window.__nagiCpp)window.__nagiCpp.waiters=[];for(var i=0;i<w.length;i++)try{w[i]()}catch(e){}}
+function ensureCpp(cb){
+  if(cppReady()){hookToast();if(cb)cb();return}
+  window.__nagiCpp=window.__nagiCpp||{pending:[],waiters:[]};
+  if(cb)window.__nagiCpp.waiters.push(cb);
+  if(window.__nagiCpp.loading)return;
+  window.__nagiCpp.loading=1;
+  var n=0,poll=setInterval(function(){
+    if(cppReady()){clearInterval(poll);window.__nagiCpp.loaded=1;flushCppWaiters()}
+    else if(++n>50&&!window.__nagiCpp.injected){ /* ~1s: intercept held them back, or they're slow — inject */
+      window.__nagiCpp.injected=1;
+      var urls=window.__nagiCpp.pending&&window.__nagiCpp.pending.length?window.__nagiCpp.pending.slice():[];
+      if(!urls.length){var ts=window.TS||'';urls=['/.cpr/w/baguettebox.js?_='+ts,'/.cpr/w/browser.js?_='+ts,'/.cpr/w/up2k.js?_='+ts]}
+      var i=0;
+      (function next(){
+        if(i>=urls.length){clearInterval(poll);flushCppWaiters();return}
+        var s=document.createElement('script');s.src=urls[i++];s.async=false;
+        var nonce=window.__nagiNonce||window.JS_NONCE;if(nonce)s.setAttribute('nonce',nonce);
+        s.onload=s.onerror=next;
+        document.head.appendChild(s);
+      })();
+    }
+  },20);
 }
-if(document.readyState=='loading')document.addEventListener('DOMContentLoaded',boot);else setTimeout(boot,0);
+function whenBody(fn){if(document.body)fn();else{var mo=new MutationObserver(function(){if(document.body){mo.disconnect();fn()}});mo.observe(document.documentElement,{childList:true,subtree:true})}}
+
+function boot(){
+  if(localStorage.nagi_classic=='1'){document.documentElement.classList.add('nagi-classic');ensureCpp()}
+  window.NagiApp.start(A);
+  hookToast();
+  if(!document.getElementById('nagi-back')){
+    var back=document.createElement('button');back.id='nagi-back';back.innerHTML='<i class="ni" style="--ni:var(--ni-wand-sparkles)"></i>Back to Nagi';back.onclick=function(){document.documentElement.classList.remove('nagi-classic');localStorage.nagi_classic='';NagiApp.refresh()};document.body.appendChild(back);
+  }
+  var idle=function(){ensureCpp()};
+  if('requestIdleCallback' in window)requestIdleCallback(idle,{timeout:2500});else setTimeout(idle,1200);
+}
+whenBody(boot);
 })();
 (function(){var A=window.NagiCpp;if(!A)return;var th=window.CGV1&&CGV1.have_th!==undefined?CGV1.have_th:true;
 var THUMBED=/\.(jpe?g|png|gif|webp|tif|tiff|bmp|heic|heif|avif|mp4|m4v|mov|webm|mkv|avi)$/i;

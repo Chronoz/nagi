@@ -519,7 +519,7 @@ function openSheet(kind,arg){st.sheet=kind;var s=$.sheet;s.className='sheet'+(ki
      autofocus (and a mid-transition focus()) would scroll .win — overflow:hidden
      is still programmatically scrollable — and leave the sheet sitting in the
      top half of the screen. That is why only the first Search tap went blank. */
-  void s.offsetWidth;pinWin();
+  if(window.NagiDeferFonts)NagiDeferFonts();void s.offsetWidth;pinWin();
   requestAnimationFrame(function(){s.classList.add('on');$.veil.classList.add('on')});
   var inp=s.querySelector('input[data-autofocus]');if(inp)setTimeout(function(){focusQuiet(inp)},200)}
 function signIn(){location.href=A.loginUrl()}
@@ -688,7 +688,7 @@ function drops(){var n=0;function show(on){$.dz.classList.toggle('on',on);if(on)
   addEventListener('dragleave',function(){if(--n<=0){n=0;show(false)}},true);
   addEventListener('drop',function(e){if(!isFiles(e)&&!(e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files.length))return;n=0;show(false);e.preventDefault();if(A.onDrop)A.onDrop(e);if(st.sheet!='upload')setTimeout(function(){openSheet('upload')},300)},true)}
 
-window.NagiApp={start:function(adapter){A=adapter;build();var p=A.start();st.path=null;go(p,false);
+window.NagiApp={start:function(adapter){if(window.__nagiStarted)return;window.__nagiStarted=1;A=adapter;build();try{performance.mark('nagi-bb')}catch(e){}try{if(window.NagiFit)NagiFit()}catch(e){}var p=A.start();st.path=null;go(p,false);
   addEventListener('popstate',function(){var p=A.here();if(p!=st.path)go(p,false)});
   if(A.onTheme)A.onTheme(function(){wallpaper();render(false)})},
  state:st,go:function(p){go(p)},open:function(k,a){openSheet(k,a)},close:closeSheet,view:setView,select:function(ps){st.sel=ps;refresh()},play:function(i){var au2=st.data.items.filter(function(x){return x.type=='audio'});playList(au2,i||0)},

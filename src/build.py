@@ -89,21 +89,38 @@ def subset_fonts():
         except subprocess.CalledProcessError:
             pass
 
+def _face(fam, fn, wt, style=None, extras=''):
+    h = file_hash(O/'fonts'/fn) if (O/'fonts'/fn).exists() else '0'
+    url = qurl('/.nagi/fonts/' + fn, h)
+    st = f';font-style:{style}' if style else ''
+    return f'@font-face{{font-family:{fam};src:url({url}) format("woff2");font-weight:{wt}{st};font-display:swap{extras}}}'
+
 def fonts_css():
+    """Critical first-screen face only (Inter). Fallback metrics keep swap from shifting the garden."""
     subset_fonts()
-    lines = []
+    fallback = (
+        "@font-face{font-family:'Inter Fallback';src:local('Arial'),local('Helvetica Neue'),"
+        "local('Helvetica'),local('.SF NS Text'),local('Segoe UI');font-weight:100 900;"
+        "font-display:swap;size-adjust:107.64%;ascent-override:90%;descent-override:22%;line-gap-override:0%}"
+    )
+    return _face('Inter', 'inter.woff2', '100 900') + '\n' + fallback
+
+def fonts_defer_css():
+    """Newsreader (sheet titles), italic, and Plex (code/share links) — not used on the first garden screen."""
+    fallback_serif = (
+        "@font-face{font-family:'Newsreader Fallback';src:local('Georgia'),local('Times New Roman'),local('Times');"
+        "font-weight:200 800;font-display:swap;size-adjust:102%;ascent-override:94%;descent-override:24%;line-gap-override:0%}"
+    )
+    fallback_mono = (
+        "@font-face{font-family:'Plex Fallback';src:local('ui-monospace'),local('Menlo'),local('Consolas'),local('monospace');"
+        "font-weight:400;font-display:swap;size-adjust:100%}"
+    )
     faces = [
-        ('Inter', 'inter.woff2', '100 900', None),
-        ('Newsreader', 'newsreader.woff2', '200 800', None),
-        ('Newsreader', 'newsreader-italic.woff2', '200 800', 'italic'),
-        ('"IBM Plex Mono"', 'plexmono.woff2', '400', None),
+        _face('Newsreader', 'newsreader.woff2', '200 800'),
+        _face('Newsreader', 'newsreader-italic.woff2', '200 800', 'italic'),
+        _face('"IBM Plex Mono"', 'plexmono.woff2', '400'),
     ]
-    for fam, fn, wt, style in faces:
-        h = file_hash(O/'fonts'/fn) if (O/'fonts'/fn).exists() else '0'
-        url = qurl('/.nagi/fonts/' + fn, h)
-        extra = f';font-style:{style}' if style else ''
-        lines.append(f'@font-face{{font-family:{fam};src:url({url}) format("woff2");font-weight:{wt}{extra};font-display:swap}}')
-    return '\n'.join(lines)
+    return '\n'.join(faces + [fallback_serif, fallback_mono]) + '\n'
 
 def minify_js(src: str) -> str:
     terser = shutil.which('terser')
@@ -128,13 +145,14 @@ def minify_css(src: str) -> str:
         src = re.sub(r'\s*([{};:,>~+])\s*', r'\1', src)
         return src.strip()
 
-def bake_pwa(js: str, manifest_h: str, icon_h: str) -> str:
+def bake_pwa(js: str, manifest_h: str, icon_h: str, df_h: str = '0') -> str:
     js = js.replace(
         "tag('link','rel','manifest',{href:B+'manifest.json'})",
         f"tag('link','rel','manifest',{{href:B+'{qurl('manifest.json', manifest_h).split('/.nagi/')[-1] if False else ''}manifest.json?nagi={manifest_h}&cache=31536000'}})")
     js = js.replace(
         "tag('link','rel','apple-touch-icon',{href:B+'icon-180.png'})",
         f"tag('link','rel','apple-touch-icon',{{href:B+'icon-180.png?nagi={icon_h}&cache=31536000'}})")
+    js = js.replace('__NAGI_DF__', df_h)
     return js
 
 def update_manifest():
@@ -159,12 +177,26 @@ def update_manifest():
 def write_run_local(hashes: dict):
     def verb(name):
         return qurl(f'/.nagi/{name}', hashes[name])
+    def inject_early(text):
+        if 'nagi-early.js' not in hashes:
+            return text
+        early = '<script nonce="{{ js_nonce }}" src="' + verb('nagi-early.js') + '"></script>'
+        nagi = '<script nonce="{{ js_nonce }}" src="' + verb('nagi.js') + '"></script>'
+        tag = early + nagi
+        if 'nagi-early.js' in text:
+            text = re.sub(
+                r'<script nonce="\{\{ js_nonce \}\}" src="/\.nagi/nagi-early\.js[^"]*"></script>'
+                r'(?:<script nonce="\{\{ js_nonce \}\}" src="/\.nagi/nagi\.js[^"]*"></script>)?',
+                tag, text)
+        else:
+            text = text.replace('content="black-translucent">', 'content="black-translucent">'+tag, 1)
+        return text
     sh = O / 'run-local.sh'
     t = sh.read_text() if sh.exists() else ''
     # css-browser, js-browser, js-other
     # quote the URLs: an unquoted & in ?nagi=&cache= is a bash background job
     t = re.sub(r"--css-browser '?\S+'?", "--css-browser '" + verb('nagi.css') + "'", t)
-    t = re.sub(r"--js-browser '?\S+'?", "--js-browser '" + verb('nagi.js') + "'", t)
+    t = re.sub(r"--js-browser '?\S+'?", "--js-browser '" + verb('nagi-late.js') + "'", t)
     t = re.sub(r"--js-other '?\S+'?", "--js-other '" + verb('nagi-pages.js') + "'", t)
     # html-head-s urls
     t = re.sub(r'href="/\.nagi/nagi-pages\.css[^"]*"', f'href="{verb("nagi-pages.css")}"', t)
@@ -172,6 +204,7 @@ def write_run_local(hashes: dict):
     t = re.sub(r'href="/\.nagi/icon-180\.png[^"]*"', f'href="{qurl("/.nagi/icon-180.png", hashes["icon-180.png"])}"', t)
     if '--u2j' not in t:
         t=t.replace(' --favico', ' --u2j 4 --favico')
+    t = inject_early(t)
     if sh.exists():
         sh.write_text(t)
     (O / 'hashes.json').write_text(__import__('json').dumps(hashes, indent=2) + '\n')
@@ -180,13 +213,14 @@ def write_run_local(hashes: dict):
     if ex.exists():
         et = ex.read_text()
         et = re.sub(r"--css-browser '?\S+'?", "--css-browser '" + verb('nagi.css') + "'", et)
-        et = re.sub(r"--js-browser '?\S+'?", "--js-browser '" + verb('nagi.js') + "'", et)
+        et = re.sub(r"--js-browser '?\S+'?", "--js-browser '" + verb('nagi-late.js') + "'", et)
         et = re.sub(r"--js-other '?\S+'?", "--js-other '" + verb('nagi-pages.js') + "'", et)
         et = re.sub(r'href="/\.nagi/nagi-pages\.css[^"]*"', 'href="' + verb('nagi-pages.css') + '"', et)
         et = re.sub(r'href="/\.nagi/manifest\.json[^"]*"', 'href="' + qurl('/.nagi/manifest.json', hashes['manifest.json']) + '"', et)
         et = re.sub(r'href="/\.nagi/icon-180\.png[^"]*"', 'href="' + qurl('/.nagi/icon-180.png', hashes['icon-180.png']) + '"', et)
         if '--u2j' not in et:
             et = et.replace(' --favico', ' --u2j 4 --favico')
+        et = inject_early(et)
         ex.write_text(et)
     cf = R / 'examples' / 'copyparty.conf'
     if cf.exists():
@@ -196,7 +230,7 @@ def write_run_local(hashes: dict):
             url = qurl(path or ('/.nagi/' + name), hashes[name])
             ct = re.sub(r'(?m)^(\s*'+key+r':\s*)\S+', r'\g<1>'+url, ct)
         cset('css-browser','nagi.css')
-        cset('js-browser','nagi.js')
+        cset('js-browser','nagi-late.js')
         cset('js-other','nagi-pages.js')
         # html-head-s is a long line
         ct = re.sub(r'href="/\.nagi/nagi-pages\.css[^"]*"', 'href="' + verb('nagi-pages.css') + '"', ct)
@@ -204,6 +238,7 @@ def write_run_local(hashes: dict):
         ct = re.sub(r'href="/\.nagi/icon-180\.png[^"]*"', 'href="' + qurl('/.nagi/icon-180.png', hashes['icon-180.png']) + '"', ct)
         if 'u2j:' not in ct:
             ct = ct.replace('  # Nagi', '  u2j: 4                    # parallel upload chunks (good over Tailscale)\n  # Nagi')
+        ct = inject_early(ct)
         cf.write_text(ct)
     # also write a small hashes file (no secrets) for README / operators
     (O / 'hashes.json').write_text(json.dumps(hashes, indent=2) + '\n')
@@ -218,13 +253,17 @@ def build():
     # nagi.css is the app+classic layer and must come after it
     man_h = update_manifest()
     icon_h = file_hash(O/'icon-180.png') if (O/'icon-180.png').exists() else '0'
-    pwa_js = bake_pwa(r(S/'pwa.js'), man_h, icon_h)
+    dfcss = hdr + minify_css(fonts_defer_css())
+    (O/'nagi-fonts-defer.css').write_text(dfcss)
+    df_h = file_hash(O/'nagi-fonts-defer.css')
+    pwa_js = bake_pwa(r(S/'pwa.js'), man_h, icon_h, df_h)
 
     pages_css = hdr + minify_css(fcss + '\n' + icss + '\n' + pages_base + '\n' + pwa_css)
     app_css = minify_css(r(S/'classic.css') + '\n' + r(S/'app.css') + '\n' + r(S/'bridge.css'))
     nagi_css = hdr + app_css
 
-    nagi_js = hdr + minify_js(pwa_js + '\n' + r(S/'garden.js') + '\n' + r(S/'koi.js') + '\n' + r(S/'app.js') + '\n' + r(S/'classic.js') + '\n' + r(S/'adapter-cpp.js'))
+    bundled = minify_js(pwa_js + '\n' + r(S/'garden.js') + '\n' + r(S/'koi.js') + '\n' + r(S/'app.js') + '\n' + r(S/'classic.js') + '\n' + r(S/'adapter-cpp.js'))
+    nagi_js = hdr + 'if(!window.__nagiJs){window.__nagiJs=1;\n' + bundled + '\n}'
     pages_js = hdr + minify_js(pwa_js + '\n' + r(S/'garden.js') + '\n' + r(S/'pages.js'))
 
     (O/'nagi.css').write_text(nagi_css)
@@ -232,7 +271,14 @@ def build():
     (O/'nagi-pages.css').write_text(pages_css)
     (O/'nagi-pages.js').write_text(pages_js)
 
-    hashes = {n: file_hash(O/n) for n in ('nagi.css','nagi.js','nagi-pages.css','nagi-pages.js','manifest.json','icon-180.png')}
+    js_h = file_hash(O/'nagi.js')
+    early = r(S/'nagi-early.js').replace('__NAGI_JS_URL__', qurl('/.nagi/nagi.js', js_h))
+    (O/'nagi-early.js').write_text(hdr + minify_js(early))
+
+    late = r(S/'nagi-late.js').replace('__NAGI_JS_URL__', qurl('/.nagi/nagi.js', js_h))
+    (O/'nagi-late.js').write_text(hdr + minify_js(late))
+
+    hashes = {n: file_hash(O/n) for n in ('nagi.css','nagi.js','nagi-pages.css','nagi-pages.js','nagi-early.js','nagi-late.js','nagi-fonts-defer.css','manifest.json','icon-180.png')}
     write_run_local(hashes)
 
     # mockup (keep readable-enough; minify css/js to keep the file smaller)
