@@ -76,6 +76,7 @@ function build(){
   $.veil.onclick=closeSheet;
   root.querySelector('.drawer-h').onclick=function(){$.ctx.classList.toggle('open')};
   $.ctx.addEventListener('click',function(e){if(e.target.closest('.dtg'))$.ctx.classList.toggle('open')});
+  drawerDrag();
   // v3g mobile: actions live in a small overflow menu, never as big buttons
   $.mo.onclick=function(e){e.stopPropagation();var on=!$.mm.classList.contains('on');$.mm.classList.toggle('on',on);$.mo.setAttribute('aria-expanded',on)};
   document.addEventListener('click',function(e){if(st.pop&&!e.target.closest('.pop,.fa'))popClose()});
@@ -116,6 +117,25 @@ function up(){if(st.path=='/'||!st.path)return;go(dirname(st.path.replace(/\/$/,
 /* ---------- context column ---------- */
 function selItems(){return st.data?st.data.items.filter(function(x){return st.sel.indexOf(x.path)>=0}):[]}
 function kindOf(list){var t={};list.forEach(function(x){t[x.isDir?'folder':x.type]=1});var k=Object.keys(t);return k.length==1?k[0]:'mixed'}
+// v3m: keep the summary line's height and width stable; crossfade the figure and the note (no movement)
+function paintNum(h,note,items){var n=$.num;
+  if(!n.querySelector('.nv')){
+    n.innerHTML='<span class="nv"><span class="nva on"><span class="big">'+esc(h[0])+'</span><small>'+esc(h[1])+'</small></span><span class="nvb"><span class="big"></span><small></small></span></span><span class="note"><span class="na on"></span><span class="nb"></span></span><button class="dtg" aria-label="Show or hide the list"><span class="dlb"></span>'+ic('chevron-up')+'</button>';
+    n.querySelector('.na').textContent=note;n.querySelector('.dlb').textContent=items;n.dataset.face='a';reserveNum(n);return}
+  var face=n.dataset.face||'a',next=face==='a'?'b':'a',
+      curN=n.querySelector('.nv'+face),nxtN=n.querySelector('.nv'+next),
+      curT=n.querySelector('.n'+face),nxtT=n.querySelector('.n'+next);
+  n.querySelector('.dlb').textContent=items;
+  var sameN=curN.querySelector('.big').textContent===h[0]&&curN.querySelector('small').textContent===h[1],
+      sameT=curT.textContent===note;
+  if(sameN&&sameT){reserveNum(n);return}
+  nxtN.querySelector('.big').textContent=h[0];nxtN.querySelector('small').textContent=h[1];nxtT.textContent=note;
+  if(RM){curN.classList.remove('on');curT.classList.remove('on');nxtN.classList.add('on');nxtT.classList.add('on');n.dataset.face=next;reserveNum(n);return}
+  nxtN.classList.remove('on');nxtT.classList.remove('on');void n.offsetWidth;
+  curN.classList.remove('on');curT.classList.remove('on');nxtN.classList.add('on');nxtT.classList.add('on');n.dataset.face=next;reserveNum(n)}
+function reserveNum(n){n=n||$.num;var nv=n.querySelector('.nv');if(!nv)return;var a=n.querySelector('.nva'),b=n.querySelector('.nvb'),w=Math.max(a.scrollWidth,b.scrollWidth);
+  if(w)nv.style.minWidth=w+'px'}
+
 function renderCtx(){
   var d=st.data,p=st.path,segs=p.split('/').filter(Boolean),acc='/',cr='<a data-go="/">'+esc(A.rootName||'Everything')+'</a>';
   segs.forEach(function(s){acc+=s+'/';cr+='<span class="s">/</span><a data-go="'+esc(acc)+'">'+esc(decodeURIComponent(s))+'</a>'});
@@ -124,7 +144,8 @@ function renderCtx(){
   var sel=selItems(),total=d.items.reduce(function(a,x){return a+(x.size||0)},0),nd=d.items.filter(function(x){return x.isDir}).length,nf=d.items.length-nd;
   var big=sel.length?sel.reduce(function(a,x){return a+(x.size||0)},0):total,h=hs(big);
   var note=sel.length?'selected of '+fs(total)+' here':p=='/'&&d.free!=null?'used · '+fs(d.free)+' free':'in '+esc(title(p));
-  $.num.innerHTML='<span class="big">'+esc(h[0])+'</span><small>'+h[1]+'</small><span class="note">'+note+'</span><button class="dtg" aria-label="Show or hide the list">'+(d.items.length?d.items.length+(d.items.length==1?' item':' items'):'empty')+ic('chevron-up')+'</button>';
+  var items=d.items.length?d.items.length+(d.items.length==1?' item':' items'):'empty';
+  paintNum(h,note,items);
   var selSz=sel.reduce(function(a,x){return a+(x.size||0)},0);
   $.chh.innerHTML=d.items.length?'<span class="h1"><b>●</b>Largest first</span><span class="h2">'+(sel.length?sel.length+' selected · '+fs(selSz):fs(total))+'</span>'+(d.items.length?'<a class="sa">'+(sel.length==d.items.length?'Clear':'Select all')+'</a>':''):'';
   var sa=$.chh.querySelector('.sa');if(sa)sa.onclick=function(){st.sel=sel.length==d.items.length?[]:d.items.map(function(x){return x.path});refresh()};
@@ -210,6 +231,47 @@ function renderActs(sel){var a=$.acts,b=$.acts2,fa=$.fa;a.innerHTML='';b.innerHT
     var tgt=n<3||!sel.length?a:b;if(!sel.length&&n>2)return;
     tgt.appendChild(btn(o.t,o.danger?'danger':n==0?'fill':n==1?'':'quiet',o.f))})}
 // v3g: "Download all" asks first (it is easy to misclick): a small popover under the button, a sheet on phones
+// v3k: the phone drawer follows the finger (handle + header; the list only when scrolled to the top), snaps by distance or flick
+function drawerDrag(){var c=$.ctx,H=c.querySelector('.drawer-h'),d=null,eat=false,tm=0;
+  function mob(){return innerWidth<=760&&getComputedStyle(H).display!='none'}
+  function rub(x){return 46*(1-Math.exp(-x/110))}
+  function lims(){var o=c.classList.contains('open'),h=c.offsetHeight,ih=c.style.height,ch,oh;c.style.transition='none';c.style.height='';
+    c.classList.remove('open');ch=c.offsetHeight;c.classList.add('open');oh=c.offsetHeight;c.classList.toggle('open',o);c.style.height=ih;void c.offsetHeight;c.style.transition='';
+    return {o:o,h:h,ch:ch,oh:Math.max(oh,ch+40)}}
+  function start(y){if(!mob())return false;clearTimeout(tm);var L=lims();d={y0:y,ys:[[y,Date.now()]],L:L,moved:false,h:L.h};return true}
+  function move(y){if(!d)return;var dy=d.y0-y;if(!d.moved){if(Math.abs(dy)<6)return;d.moved=true;c.classList.add('drag')}
+    var L=d.L,h=L.h+dy;if(h>L.oh)h=L.oh+rub(h-L.oh);else if(h<L.ch)h=L.ch-rub(L.ch-h);d.h=h;
+    c.style.height=h+'px';c.classList.toggle('open',L.o||h>L.ch+4);d.ys.push([y,Date.now()]);if(d.ys.length>6)d.ys.shift()}
+  function end(cancel){if(!d)return;var D=d;d=null;if(!D.moved)return;eat=true;setTimeout(function(){eat=false},350);
+    var L=D.L,z=D.ys[D.ys.length-1],a=D.ys.filter(function(q){return z[1]-q[1]<=90})[0]||D.ys[0],v=z[1]-a[1]>0?(a[0]-z[0])/(z[1]-a[1]):0,p=(D.h-L.ch)/(L.oh-L.ch),op;
+    if(cancel)op=L.o;else if(Math.abs(v)>.35)op=v>0;else op=L.o?p>.7:p>=.3;
+    c.classList.remove('drag');c.classList.add('open');void c.offsetHeight;
+    var fin=function(){c.style.transition='';c.style.height='';c.classList.toggle('open',op)};
+    if(RM){fin();return}
+    c.style.transition='height .32s cubic-bezier(.2,.8,.2,1)';c.style.height=(op?L.oh:L.ch)+'px';tm=setTimeout(fin,340)}
+  // pointer drag on the handle and header (touch-action:none there in CSS)
+  c.addEventListener('pointerdown',function(e){if(!e.isPrimary||e.button>0||!e.target.closest('.drawer-h,.crumb,.num,.say')||e.target.closest('.np'))return;
+    if(start(e.clientY)){try{c.setPointerCapture(e.pointerId)}catch(_){}}});
+  c.addEventListener('pointermove',function(e){if(d&&d.pid!=='t')move(e.clientY)});
+  c.addEventListener('pointerup',function(){if(d&&d.pid!=='t')end(false)});
+  c.addEventListener('pointercancel',function(){if(d&&d.pid!=='t')end(true)});
+  // pull the open list down to close, only from scroll-top; otherwise the list scrolls normally
+  var ts=null;function scl(t){for(var n=t;n&&n!==c;n=n.parentNode)if(n.scrollTop>0)return true;return c.scrollTop>0}
+  c.addEventListener('touchstart',function(e){ts=null;if(e.touches.length!=1||!c.classList.contains('open')||e.target.closest('.drawer-h,.crumb,.num,.say,.np,input'))return;if(scl(e.target))return;ts={y:e.touches[0].clientY,x:e.touches[0].clientX}},{passive:true});
+  c.addEventListener('touchmove',function(e){if(e.touches.length!=1){if(d&&d.pid==='t')end(true);ts=null;return}var t=e.touches[0];
+    if(ts&&!d){var dy=t.clientY-ts.y,dx=Math.abs(t.clientX-ts.x);if(dy>8&&dy>dx){if(start(ts.y)){d.pid='t';move(t.clientY)}ts=null}else if(dy<-4||dx>10)ts=null}
+    if(d&&d.pid==='t'){e.preventDefault();move(t.clientY)}},{passive:false});
+  c.addEventListener('touchend',function(){ts=null;if(d&&d.pid==='t')end(false)});
+  c.addEventListener('touchcancel',function(){ts=null;if(d&&d.pid==='t')end(true)});
+  // a drag is not a tap: swallow the click that follows it (handle toggle, crumb links)
+  c.addEventListener('click',function(e){if(eat){eat=false;e.preventDefault();e.stopPropagation()}},true);
+}
+// v3l: Safari/iOS (every iPhone browser is WebKit) can't open MKV/AVI/WMV/FLV/... at all; say so instead of showing a dead player
+var NOSAF=/^(mkv|avi|wmv|flv|mpg|mpeg|vob|ogv|ogm|3gp|ts|m2ts|mts|rm|rmvb|asf|divx|xvid)$/;
+function APPLE_WK(){var u=navigator.userAgent;return /iP(hone|ad|od)/.test(u)||(/Macintosh/.test(u)&&navigator.maxTouchPoints>1)||(/Safari/.test(u)&&!/Chrome|Chromium|Edg|OPR|Firefox|Android/.test(u))}
+function vno(ext,apple,x,codec){return '<div class="vno">'+ic('film')+'<b>'+(apple?(codec?'Safari can\u2019t play this video':'Safari can\u2019t play this format'):'This browser can\u2019t play this video')+'</b>'+
+  '<p>'+(codec||!apple?'This file\u2019s video or audio codec isn\u2019t supported here. Download it and open it in a video app like VLC or Infuse.':'<span class="ext">.'+esc(ext)+'</span> videos need an app like VLC or Infuse on iPhone. MP4 or MOV (H.264 / HEVC with AAC audio) plays here.')+'</p>'+
+  '<button class="btn fill vdl">'+ic('download')+'Download'+(x&&x.size?' · '+fs(x.size):'')+'</button></div>'}
 function confirmAll(){var d=st.data;if(!d)return;var nd=d.items.filter(function(x){return x.isDir}).length,nf=d.items.length-nd,tot=d.items.reduce(function(a,x){return a+(x.size||0)},0);
   var bits=[];if(nd)bits.push(nd+(nd==1?' folder':' folders'));if(nf)bits.push(nf+(nf==1?' file':' files'));
   var what=(bits.join(', ')||'nothing yet')+' · '+fs(tot)+' as a .zip',name=esc(title(st.path)),go=function(){A.zip(st.path,null)};
@@ -342,6 +404,7 @@ function stageEvents(){var clickT;
     if(st.hover!==c.item.path){st.hover=c.item.path;[].forEach.call($.chk.querySelectorAll('.row'),function(rw){rw.classList.toggle('hov',rw.dataset.p==c.item.path)})}
     var small=(c.r||0)<30;if(small){$.tip.innerHTML=esc(x?x.name:o.free?'Free space':o.up.name)+'<span>'+(x?fs(x.size):o.free?fs(st.data.free):Math.round(o.up.pct)+'%')+'</span>';$.tip.style.left=(e.clientX-r.left)+'px';$.tip.style.top=(e.clientY-r.top)+'px';$.tip.classList.add('on')}else $.tip.classList.remove('on')});
   $.stage.addEventListener('mouseleave',function(){$.tip.classList.remove('on');st.hover=null;[].forEach.call($.chk.querySelectorAll('.row'),function(rw){rw.classList.remove('hov')})});
+  $.stage.addEventListener('pointerdown',function(e){var g=e.target.closest&&e.target.closest('.cell');var c=g&&st.cells[g.dataset.i];if(c&&c.item.x&&c.item.x.isDir&&A.prefetch)A.prefetch(c.item.x.path)},{passive:true});
   $.stage.addEventListener('click',function(e){var g=e.target.closest&&e.target.closest('.cell');var c=g&&st.cells[g.dataset.i];if(!c||!c.item.x){if(c&&c.item.free)toast(ic('hard-drive')+' '+fs(st.data.free)+' free of '+fs(st.data.total));return}
     var x=c.item.x;if(x.isDir&&!(e.metaKey||e.ctrlKey||e.shiftKey)){clearTimeout(clickT);return go(x.path)}
     clearTimeout(clickT);var multi=e.metaKey||e.ctrlKey||e.shiftKey;clickT=setTimeout(function(){toggleSel(x.path,false)},multi?0:190)});
@@ -441,7 +504,12 @@ var SHEETS={
    A.share(paths,{exp:exp,pw:s.querySelector('.field input').value,perms:perms}).then(function(url){b.textContent='Link ready';s.querySelector('.out').innerHTML='<div class="link"><input readonly value="'+esc(url)+'"><button class="btn fill cp">Copy</button></div>'+(A.qr?'<img class="qr" alt="QR code for the link" src="'+esc(A.qr(url))+'">':'');
     s.querySelector('.cp').onclick=function(){var i=s.querySelector('.link input');i.select();(navigator.clipboard?navigator.clipboard.writeText(url):Promise.reject()).then(function(){toast(ic('check')+' Link copied')},function(){document.execCommand('copy');toast(ic('check')+' Link copied')})}},
    function(e){b.disabled=false;b.textContent='Create link';toast(ic('circle-alert')+' '+esc(e&&e.message||'Could not create the link'),4000)})}},
- video:function(s,x){st.sx=x;s.innerHTML=head(esc(x.name),fs(x.size)+' · '+esc(rel(x.ts)),1)+'<div class="sh-b"><video controls autoplay playsinline src="'+esc(A.url(x))+'"></video></div>';s.querySelector('.dl').onclick=function(){download([x])};if(!au.paused)au.pause()},
+ video:function(s,x){st.sx=x;var ext=((x.name||'').match(/\.([^.\/]+)$/)||['',''])[1].toLowerCase(),apple=APPLE_WK();
+  s.innerHTML=head(esc(x.name),fs(x.size)+' · '+esc(rel(x.ts)),1)+'<div class="sh-b">'+(apple&&NOSAF.test(ext)?vno(ext,apple,x):'<video controls playsinline preload="metadata" src="'+esc(A.url(x))+'"></video>')+'</div>';
+  s.querySelector('.dl').onclick=function(){download([x])};if(!au.paused)au.pause();
+  var v=s.querySelector('video'),bad=function(){var b=s.querySelector('.sh-b');if(!b||!b.contains(v))return;v.removeAttribute('src');try{v.load()}catch(_){}b.innerHTML=vno(ext,apple,x,1);wire()},
+   wire=function(){var d=s.querySelector('.vdl');if(d)d.onclick=function(){download([x])}};
+  wire();if(v){v.addEventListener('error',bad);var p=v.play&&v.play();if(p&&p.catch)p.catch(function(e){if(e&&e.name=='NotSupportedError')bad()})}},
  read:function(s,x){st.sx=x;var md=/\.md$/i.test(x.name);s.innerHTML=head(esc(x.name),fs(x.size)+' · '+esc(rel(x.ts)),1)+'<div class="sh-b" style="position:relative;padding:0 6px 6px">'+(md&&A.mdUrl?'<iframe class="reader" title="'+esc(x.name)+'" src="'+esc(A.mdUrl(x))+'"></iframe>':'<pre class="txt" style="padding:10px 22px 30px">Loading…</pre>')+'</div>';
   var ifr=s.querySelector('iframe');if(ifr)ifr.addEventListener('load',function(){try{ifr.contentDocument.documentElement.classList.add('nagi-embed')}catch(e){}});
   s.querySelector('.dl').onclick=function(){download([x])};
@@ -498,9 +566,11 @@ function keys(){addEventListener('keydown',function(e){
   else if(e.metaKey||e.ctrlKey||e.altKey)used=false;
   if(used!==false)e.stopImmediatePropagation()},true)}
 function drops(){var n=0;function show(on){$.dz.classList.toggle('on',on);if(on)$.dz.querySelector('p').textContent='Into '+title(st.path)}
-  addEventListener('dragenter',function(e){if(!e.dataTransfer||[].indexOf.call(e.dataTransfer.types,'Files')<0)return;n++;show(true)},true);
+  function isFiles(e){return e.dataTransfer&&[].indexOf.call(e.dataTransfer.types,'Files')>=0}
+  addEventListener('dragenter',function(e){if(!isFiles(e))return;n++;show(true)},true);
+  addEventListener('dragover',function(e){if(!isFiles(e))return;e.preventDefault();try{e.dataTransfer.dropEffect='copy'}catch(_){}},true);
   addEventListener('dragleave',function(){if(--n<=0){n=0;show(false)}},true);
-  addEventListener('drop',function(e){n=0;show(false);if(A.onDrop)A.onDrop(e);if(st.sheet!='upload')setTimeout(function(){openSheet('upload')},300)},true)}
+  addEventListener('drop',function(e){if(!isFiles(e)&&!(e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files.length))return;n=0;show(false);e.preventDefault();if(A.onDrop)A.onDrop(e);if(st.sheet!='upload')setTimeout(function(){openSheet('upload')},300)},true)}
 
 window.NagiApp={start:function(adapter){A=adapter;build();var p=A.start();st.path=null;go(p,false);
   addEventListener('popstate',function(){var p=A.here();if(p!=st.path)go(p,false)});

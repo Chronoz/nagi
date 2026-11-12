@@ -9,6 +9,12 @@ function here(){var p=location.pathname;return p.endsWith('/')?p:p.replace(/[^\/
 function dec(s){try{return decodeURIComponent(s)}catch(e){return s}}
 function parseSize(s){var m=/([\d.]+)\s*([KMGTP]?)i?B/i.exec(s||'');if(!m)return null;return parseFloat(m[1])*Math.pow(1024,' KMGTP'.indexOf((m[2]||' ').toUpperCase()))}
 function post(url,body,type){return fetch(url,{method:'POST',credentials:'same-origin',headers:type?{'Content-Type':type}:{},body:body}).then(function(r){return r.text().then(function(t){if(r.status>=300)throw new Error((t||'').replace(/<[^>]+>/g,'').trim().slice(0,200)||('HTTP '+r.status));return t})})}
+function upInput(dir){var f=document.getElementById('u2form');if(!f)return document.getElementById(dir?'dir1':'file1');
+  var all=f.querySelectorAll(dir?'input[webkitdirectory],input[directory]':'input[type=file]');
+  var last=null;
+  for(var i=0;i<all.length;i++){var el=all[i],isDir=el.hasAttribute('webkitdirectory')||el.hasAttribute('directory');
+    if(!!dir===isDir)last=el}
+  return last||document.getElementById(dir?'dir1':'file1')}
 function ck(id){var e=document.getElementById(id);return e?!!e.checked:false}
 function tg(id){var e=document.getElementById(id);if(e)e.click()}
 var A={
@@ -37,8 +43,13 @@ var A={
  mkdir:function(dir,name){var fd=new FormData();fd.append('act','mkdir');fd.append('name',name);return post(dir,fd)},
  rename:function(x,n){var isd=/\/$/.test(x.path),base=x.path.replace(/[^\/]+\/?$/,''),dst=base+encodeURIComponent(n)+(isd?'/':'');return post(x.path+'?move='+dst)},
  del:function(list){return list.reduce(function(p,x){return p.then(function(){return post(x.path+'?delete')})},Promise.resolve())},
- pickFiles:function(){var e=document.getElementById('file1');if(e)e.click()},
- pickFolder:function(){var e=document.getElementById('dir1');if(e)e.click()},
+ pickFiles:function(){var e=upInput(false);if(e)e.click()},
+ pickFolder:function(){var e=upInput(true);if(e)e.click()},
+ // always feed drops into up2k's upload path (not the 'search' drop-zone; that is chosen by Y on a bare body drop)
+ onDrop:function(e){try{e.preventDefault();e.stopPropagation()}catch(_){}
+   var fn=document.body.ondrop,dz=document.getElementById('up_dz')||{getAttribute:function(){return 'up_dz'}};
+   if(typeof fn==='function')fn.call(dz,e);},
+
  uploads:function(){var u=window.up2k;if(!u||!u.ui||!u.ui.tab||!u.st)return [];var fl=u.st.files;
    return u.ui.tab.map(function(t,i){var f=fl[i]||{},hp=String(t.hp||''),m=/([\d.]+)%,\s*([^,]+),\s*([\d.]+)\s*MiB/.exec(hp),state=t.in=='ok'?'ok':t.in=='ng'?'ng':t.in=='q'&&!t.bd&&!t.nh?'q':'run';
      var pct=state=='ok'?100:m?parseFloat(m[1]):t.bt?100*t.bd/t.bt:0;if(t.in=='q'&&t.nh&&!t.bd)pct=0;
@@ -59,6 +70,21 @@ function auto(){var h=new Date().getHours()+new Date().getMinutes()/60;return h>
 function apply(){var t=A.theme();if(t=='sky')t=auto();var c=t=='yugure'?'fz f z':'fy f y';var h=document.documentElement,keep=h.classList.contains('nagi-classic');var app=h.classList.contains('nagi-app');h.className=c+(keep?' nagi-classic':'')+(app?' nagi-app':'')+' nagi';try{localStorage.cpp_thm=c}catch(e){}}
 apply();setInterval(function(){if(A.theme()=='sky')apply()},60000);
 window.NagiCpp=A;
+// v3m: remember folder listings for a short time, and let the garden prefetch on touch
+(function(){var C={},TTL=45000;
+  var raw=A.ls;
+  A.ls=function(path){var e=C[path];if(e&&e.d&&Date.now()-e.t<TTL)return Promise.resolve(e.d);if(e&&e.p)return e.p;
+    var p=raw(path).then(function(d){C[path]={t:Date.now(),d:d};return d},function(err){if(C[path]&&C[path].p)delete C[path];throw err});
+    C[path]={t:0,p:p};return p};
+  A.prefetch=function(path){if(!path||(C[path]&&C[path].d&&Date.now()-C[path].t<TTL))return;A.ls(path)};
+  A.invalidate=function(path){if(!path){C={};return}Object.keys(C).forEach(function(k){if(k===path||k.indexOf(path)===0||path.indexOf(k)===0)delete C[k]})};
+})();
+(function(){var mk=A.mkdir,rn=A.rename,dl=A.del;
+  A.mkdir=function(dir,name){return mk(dir,name).then(function(r){A.invalidate(dir);return r})};
+  A.rename=function(x,n){return rn(x,n).then(function(r){A.invalidate(x.path);return r})};
+  A.del=function(list){return dl(list).then(function(r){list.forEach(function(x){A.invalidate(x.path)});return r})};
+})();
+
 function boot(){
   if(localStorage.nagi_classic=='1')document.documentElement.classList.add('nagi-classic');
   window.NagiApp.start(A);

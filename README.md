@@ -66,11 +66,11 @@ copyparty -p 3979 -i 127.0.0.1 \
   -a alice:CHANGE-ME --usernames \
   -v /path/to/your/files:/:r:rwmda,alice \
   -v ./nagi/theme:/.nagi:r \
-  --themes 12 --theme 11 \
-  --css-browser /.nagi/nagi.css \
-  --js-browser  /.nagi/nagi.js \
-  --js-other    /.nagi/nagi-pages.js \
-  --html-head-s '<link rel="stylesheet" href="/.nagi/nagi-pages.css"><link rel="manifest" href="/.nagi/manifest.json"><link rel="apple-touch-icon" href="/.nagi/icon-180.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Nagi"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">' \
+  --themes 12 --theme 11 --u2j 4 \
+  --css-browser '/.nagi/nagi.css?nagi=98ea3aec7f&cache=31536000' \
+  --js-browser  '/.nagi/nagi.js?nagi=093ce4876c&cache=31536000' \
+  --js-other    '/.nagi/nagi-pages.js?nagi=a5332f4e96&cache=31536000' \
+  --html-head-s '<link rel="stylesheet" href="/.nagi/nagi-pages.css?nagi=aea58f83eb&cache=31536000"><link rel="manifest" href="/.nagi/manifest.json?nagi=b8ef2fba1e&cache=31536000"><link rel="apple-touch-icon" href="/.nagi/icon-180.png?nagi=88d99dbc9b&cache=31536000"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Nagi"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">' \
   --favico "凪 17282B EEE5D1" --no-robots
 ```
 
@@ -81,8 +81,9 @@ What each flag does:
 | flag | why |
 |---|---|
 | `-v ./nagi/theme:/.nagi:r` | serves the theme files at `/.nagi/`, read-only for everyone |
-| `--css-browser`, `--js-browser` | load Nagi into copyparty's file browser |
+| `--css-browser`, `--js-browser` | load Nagi into copyparty's file browser. Quote the URLs: an unquoted `&` is a bash background job. The `?nagi=HASH&cache=31536000` query lets the browser cache the file for a year; `src/build.py` updates the hash when you rebuild |
 | `--js-other` + `--html-head-s` | load the calm login/control-panel pages, the PWA manifest and the iPhone home-screen icon on every other page |
+| `--u2j 4` | four parallel up2k upload chunks (good over Tailscale / a phone). Server default is 2 |
 | `--themes 12 --theme 11` | gives Nagi its own copyparty theme slot so copyparty's own colours don't leak in |
 | `--usernames` | log in with username + password (instead of password only) |
 | `-v …:/:r:rwmda,alice` | guests can browse & download, `alice` can upload, move, delete and admin |
@@ -103,10 +104,11 @@ Prefer a config file? See [`examples/copyparty.conf`](examples/copyparty.conf), 
 [global]
   themes: 12
   theme: 11
-  css-browser: /.nagi/nagi.css
-  js-browser: /.nagi/nagi.js
-  js-other: /.nagi/nagi-pages.js
-  html-head-s: <link rel="stylesheet" href="/.nagi/nagi-pages.css"><link rel="manifest" href="/.nagi/manifest.json"> …
+  u2j: 4
+  css-browser: /.nagi/nagi.css?nagi=98ea3aec7f&cache=31536000
+  js-browser: /.nagi/nagi.js?nagi=093ce4876c&cache=31536000
+  js-other: /.nagi/nagi-pages.js?nagi=a5332f4e96&cache=31536000
+  html-head-s: <link rel="stylesheet" href="/.nagi/nagi-pages.css?nagi=aea58f83eb&cache=31536000"><link rel="manifest" href="/.nagi/manifest.json?nagi=b8ef2fba1e&cache=31536000"> …
 
 [/.nagi]
   /path/to/nagi/theme
@@ -116,7 +118,7 @@ Prefer a config file? See [`examples/copyparty.conf`](examples/copyparty.conf), 
 
 ## Remote access
 
-Works great over [Tailscale](https://tailscale.com): just bind copyparty to `127.0.0.1` plus your tailnet IP (`-i 127.0.0.1,100.x.y.z`) instead of `0.0.0.0`, and open it from your phone anywhere. Over the internet, `--u2j 4` makes uploads faster.
+Works great over [Tailscale](https://tailscale.com): just bind copyparty to `127.0.0.1` plus your tailnet IP (`-i 127.0.0.1,100.x.y.z`) instead of `0.0.0.0`, and open it from your phone anywhere. `--u2j 4` (already in the examples) runs four parallel up2k chunks, which is a good default for an iPhone over Tailscale. Leave turbo mode off; hashing already runs in a web worker on Safari.
 
 ## iPhone: add to home screen
 
@@ -131,6 +133,7 @@ On mobile, Search / Upload / Settings / More live in the bottom bar. **More → 
 - `-e2dsa` builds copyparty's file index (search, dedup, faster listings). Skip it on huge or cloud-synced folders (Dropbox, iCloud…), because it reads every file once.
 - `-e2ts` reads media tags so the music player shows artist & title.
 - Keep the theme mount read-only (`:r`). The theme folder is served to everyone, so don't put secrets or scripts in it.
+- After a theme update, just reload the page (the `?nagi=` hash is a new URL, so the old cache is skipped). If you added it to the iPhone home screen, swipe the app away and open it again.
 - Classic copyparty UI: **Settings → Classic copyparty**. Switch back from the 凪 button.
 
 ## Build from source
@@ -154,6 +157,6 @@ Full list in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## License
 
-[MIT](LICENSE) for Nagi's own code (see the koi note below).
+[MIT](LICENSE) © 2026 Tri Nguyen, for Nagi's own code (see the koi note below).
 
 **Note on the koi pond:** `src/koi.js` (and the koi part of the built `theme/nagi.js`) is adapted from Mia-lab's koi pond, linked above. The original was published without a licence notice, so the MIT licence does **not** cover those adapted portions, and their original author keeps all rights to them. copyparty isn't included here, only linked. Fonts and icons keep their own licences.

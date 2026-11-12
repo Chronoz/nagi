@@ -94,7 +94,8 @@ Pond.prototype.fit=function(cell,o){var P=cell.poly,bb=[1e9,1e9,-1e9,-1e9];P.for
   // inward unit normal per edge, for smooth wall avoidance
   this.EN=this.P.map(function(a,i,Q){var b=Q[(i+1)%Q.length],dx=b[0]-a[0],dy=b[1]-a[1],l=Math.hypot(dx,dy)||1,nx=-dy/l,ny=dx/l;if(nx*(cx-(a[0]+b[0])/2)+ny*(cy-(a[1]+b[1])/2)<0){nx=-nx;ny=-ny}return [nx,ny]});
   // internal resolution: DPR ≤ 1.5 and at most ~0.35 MP for the pond
-  var D=Math.min(1.5,window.devicePixelRatio||1);if(W*H*D*D>350000)D=Math.max(1,Math.sqrt(350000/(W*H)));this.DPR=D;
+  var low=!!((navigator.deviceMemory&&navigator.deviceMemory<=2)||(navigator.connection&&(navigator.connection.saveData||navigator.connection.effectiveType==="slow-2g")));
+  this.low=low;var D=Math.min(low?1:1.5,window.devicePixelRatio||1);if(W*H*D*D>(low?180000:350000))D=Math.max(1,Math.sqrt((low?180000:350000)/(W*H)));this.DPR=D;
   var cv=this.cv;cv.style.left=bb[0]+'px';cv.style.top=bb[1]+'px';cv.style.width=W+'px';cv.style.height=H+'px';
   var kc=this.kc,pw=Math.round(W*D),ph=Math.round(H*D);if(kc.width!==pw||kc.height!==ph){kc.width=pw;kc.height=ph}this.dirty=null;
   // the water (floor + light + rim) lives on its own canvas at ≤1× and is recomposed at ~20 Hz: it only
@@ -189,7 +190,7 @@ Pond.prototype.start=function(){var me=this;if(this.raf||mq.matches||document.hi
   // the original's loop: one update per animation frame, dt from rAF timestamps only, clamped to 50 ms
   var loop=function(now){if(me.gen!==gen)return;me.raf=requestAnimationFrame(loop);
     // ≤60 fps; ≤30 fps when nobody is looking (window unfocused, or no input for 90 s)
-    if(me.last<0){me.last=now;return}if(now-me.last<(idle()?30:14))return;var dt=Math.min(.05,(now-me.last)/1000);me.last=now;
+    if(me.last<0){me.last=now;return}if(now-me.last<(idle()||me.low?30:14))return;var dt=Math.min(.05,(now-me.last)/1000);me.last=now;
     if(!me.cv.offsetParent)return; // hidden (list or classic view): no work
     me.T+=dt;me.step(dt*.8);me.draw()};this.raf=requestAnimationFrame(loop)};
 var lastAct=Date.now(),idleK=0,idleV=false;['pointermove','pointerdown','keydown','wheel','touchstart'].forEach(function(t){window.addEventListener(t,function(){lastAct=Date.now()},{passive:true,capture:true})});
@@ -202,7 +203,7 @@ window.NagiKoi={
   // host: positioned container; cell: {poly:[[x,y]..]} in host coordinates; o: {d: svg path in host coords, key, before, theme}
   show:function(host,cell,o){if(pond&&(pond.key!==o.key||pond.host!==host)){NagiKoi.hide()}
     if(!pond&&parked&&parked.key===o.key&&parked.host===host){pond=parked;parked=null;var cv=pond.cv;cv.style.transition='none';cv.style.transform='';cv.style.opacity='';cv.classList.remove('in');host.insertBefore(cv,o.before||null);void cv.offsetWidth;cv.style.transition='';cv.classList.add('in');pond.fit(cell,o)}
-    else if(!pond){if(parked){parked.destroy();parked=null}pond=new Pond(host,cell,o);pond.cv.classList.add('in')}else pond.fit(cell,o);if(o.before&&pond.cv.nextSibling!==o.before)host.insertBefore(pond.cv,o.before);pond.start();return pond},
+    else if(!pond){if(parked){parked.destroy();parked=null}pond=new Pond(host,cell,o);pond.cv.classList.add('in')}else pond.fit(cell,o);if(o.before&&pond.cv.nextSibling!==o.before)host.insertBefore(pond.cv,o.before);if(typeof requestAnimationFrame==="function")requestAnimationFrame(function(){requestAnimationFrame(function(){if(pond)pond.start()})});else pond.start();return pond},
   // leaving the root: park the pond (stopped, detached) so coming back resumes the same koi without a flash
   hide:function(){if(pond){pond.stop();if(pond.cv.parentNode)pond.cv.parentNode.removeChild(pond.cv);parked=pond;pond=null}},
   // move with the garden's zoom transition (same transform, origin and timing) and fade like the other stones
