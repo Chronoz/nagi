@@ -859,6 +859,12 @@ class Handler(BaseHTTPRequestHandler):
             rvol = rvol_of(self.headers, qs)
             body, status = stat_vpath((qs.get("stat") or [""])[0], rvol)
             return self._json(body, status)
+        if qs.get("dupes") is not None:
+            # Sidecar has no volume index; on404 serves the real listing.
+            uname = self.headers.get("X-Nagi-User") or "*"
+            if uname == "*":
+                return self._json({"ok": False, "error": "forbidden"}, 403)
+            return self._json({"ok": True, "groups": []}, 200)
         if u.path in ("/health", "/status", "/sem") and not qs.get("q"):
             return self._json(status())
         if u.path in ("/search", "/sem") or qs.get("q"):
@@ -969,6 +975,84 @@ def stat_vpath(vpath, rvol):
     }, 200
 
 
+
+def _dup_vpath(vol_vp, rd, fn):
+    """Join a volume mount, relative dir and filename into a vpath. No fs access."""
+    vp = (vol_vp or "").strip("/")
+    rd = (rd or "").replace("\\", "/").strip("/")
+    if rd in (".",):
+        rd = ""
+    fn = fn or ""
+    bits = [x for x in (vp, rd, fn) if x]
+    return "/" + "/".join(bits)
+
+
+def list_dupes(cli, rvol):
+    """Read-only groups of same-content files the caller can see. Guests: 403.
+    Never writes, links, or deletes. Uses the volume index only (no file I/O).
+    """
+    uname = getattr(cli, "uname", "*") or "*"
+    if uname == "*":
+        return {"ok": False, "error": "forbidden"}, 403
+    rvol_n = []
+    for v in rvol or []:
+        v = v if str(v).startswith("/") else "/" + str(v)
+        rvol_n.append(v.rstrip("/") or "/")
+    try:
+        conn = getattr(cli, "conn", None)
+        asrv = getattr(cli, "asrv", None)
+        if not conn or not asrv or not hasattr(conn, "get_u2idx"):
+            return {"ok": True, "groups": []}, 200
+        idx = conn.get_u2idx()
+        if not idx:
+            return {"ok": True, "groups": []}, 200
+        vfs = getattr(asrv, "vfs", None)
+        allvols = list(getattr(vfs, "all_vols", {}).items()) if vfs else []
+        sql = (
+            "select w, sz, rd, fn from up "
+            "where w is not null and length(w) > 0 and w in ("
+            "  select w from up where w is not null and length(w) > 0 "
+            "  group by w having count(*) > 1"
+            ") order by sz desc, w, rd, fn"
+        )
+        by = {}
+        for vpath, vol in allvols:
+            vp = vpath if str(vpath).startswith("/") else "/" + str(vpath)
+            vp = vp.rstrip("/") or "/"
+            if not _rvol_has(vp, rvol_n):
+                continue
+            try:
+                cur = idx.get_cur(vol)
+            except Exception:
+                cur = None
+            if not cur:
+                continue
+            try:
+                rows = cur.execute(sql)
+            except Exception:
+                continue
+            for w, sz, rd, fn in rows:
+                path = _dup_vpath(vp, rd, fn)
+                if not path:
+                    continue
+                g = by.setdefault(w, {"size": int(sz or 0), "paths": []})
+                if path not in g["paths"]:
+                    g["paths"].append(path)
+                if sz and int(sz) > g["size"]:
+                    g["size"] = int(sz)
+        groups = []
+        for g in by.values():
+            paths = g["paths"]
+            if len(paths) < 2:
+                continue
+            paths = sorted(paths)
+            groups.append({"size": g["size"], "n": len(paths), "paths": paths})
+        groups.sort(key=lambda g: (-g["size"], -g["n"], g["paths"][0]))
+        return {"ok": True, "groups": groups}, 200
+    except Exception:
+        return {"ok": False, "error": "unavailable"}, 503
+
+
 def main(cli, vn, rem):
     rem = (rem or "").strip("/")
     if rem != "sem":
@@ -983,6 +1067,21 @@ def main(cli, vn, rem):
             rvol = list(getattr(cli, "rvol", None) or ["/"])
             rvol = [("/" + v if v and not str(v).startswith("/") else (v or "/")) for v in rvol]
             body_obj, status = stat_vpath(cli.uparam.get("stat") or "", rvol)
+            body = json.dumps(body_obj).encode("utf-8")
+            try:
+                cli.reply(body, status=status, mime="application/json")
+            except TypeError:
+                try:
+                    cli.reply(body, mime="application/json")
+                except TypeError:
+                    cli.reply(body)
+            return "true"
+        # ?dupes — read-only duplicate listing; logged-in only
+        if hasattr(cli, "uparam") and cli.uparam.get("dupes") is not None:
+            uname = getattr(cli, "uname", "*") or "*"
+            rvol = list(getattr(cli, "rvol", None) or ["/"])
+            rvol = [("/" + v if v and not str(v).startswith("/") else (v or "/")) for v in rvol]
+            body_obj, status = list_dupes(cli, rvol)
             body = json.dumps(body_obj).encode("utf-8")
             try:
                 cli.reply(body, status=status, mime="application/json")

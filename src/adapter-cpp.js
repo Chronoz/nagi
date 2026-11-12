@@ -51,6 +51,7 @@ var A={
  ups:function(){return fetch(here()+'?ups',{credentials:'same-origin'}).then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error((j&&j.error)||('HTTP '+r.status));return j})})},
  unpost:function(paths){paths=(paths||[]).map(function(p){return dec(String(p).split('?')[0])});
    return post('/?delete&unpost&lim='+paths.length,JSON.stringify(paths),'application/json').then(function(t){if(A.invalidate)paths.forEach(function(p){A.invalidate(parentOf(p))});return t})},
+ dupes:function(){return fetch('/.nagi/sem?dupes',{credentials:'same-origin'}).then(function(r){return r.json().then(function(j){if(r.status===401||r.status===403)throw new Error('forbidden');if(!r.ok||(j&&j.ok===false))throw new Error((j&&j.error)||('HTTP '+r.status));return j},function(){throw new Error('HTTP '+r.status)})})},
  saveText:function(x,body,lastmod){var fd=new FormData();fd.append('act','tput');fd.append('lastmod',String(lastmod==null?-1:lastmod));fd.append('body',body);
    return fetch(x.path,{method:'POST',credentials:'same-origin',body:fd}).then(function(r){return r.text().then(function(t){var j;try{j=JSON.parse(t)}catch(e){throw new Error((t||'').replace(/<[^>]+>/g,'').trim().slice(0,200)||('HTTP '+r.status))}
      if(r.status>=300)throw new Error((t||'').replace(/<[^>]+>/g,'').trim().slice(0,200)||('HTTP '+r.status));

@@ -216,6 +216,7 @@ function actList(sel){var L=[],can=A.perms(),k=kindOf(sel);
     if(au.length>1)L.push({t:'Play all '+au.length,i:'play',k:'P',f:function(){playList(au,0)}});
     if(A.canShare())L.push({t:'Share folder',i:'link',f:function(){openSheet('share',[st.path])}});
     if(A.user&&can.write&&A.ups)L.push({t:'Undo upload',i:'undo-2',more:1,f:function(){openSheet('unpost')}});
+    if(A.user&&A.dupes)L.push({t:'Duplicates',i:'files',more:1,f:function(){openSheet('dupes')}});
     return L}
   var one=sel.length==1?sel[0]:null;
   if(k=='audio')L.push({t:one?'Play':'Play '+sel.length,i:'play',k:'P',f:function(){playList(sel,0)},main:1});
@@ -788,6 +789,24 @@ var SHEETS={
       function(e){st._unAsk=st._unAsk||{box:ask};if(ask){ask.hidden=false;ask.innerHTML='<p>Could not undo: '+esc(e.message||e)+'</p><div class="un-acts"><button type="button" class="btn quiet no">Close</button></div>';ask.querySelector('.no').onclick=function(){ask.hidden=true;st._unAsk=null}}});
   }
   A.ups().then(paint,function(){s.querySelector('.sh-b').innerHTML='<p class="hint">Could not load recent uploads.</p>'})
+},
+ dupes:function(s){
+  s.classList.add('dup');
+  s.innerHTML=head('Duplicates','Files with the same contents. This list is read-only — delete an extra copy from the usual menu if you want.')+'<div class="sh-b"><p class="hint">Loading…</p></div>';
+  if(!A.user){s.querySelector('.sh-b').innerHTML='<p class="hint">Sign in to see duplicates.</p>';return}
+  function parentOf(p){return (p||'/').replace(/[^\/]+\/?$/,'')||'/'}
+  function nameOf(p){var a=String(p||'').split('/').filter(Boolean);return a.length?a[a.length-1]:p}
+  function paint(j){
+    var g=(j&&j.groups)||[],box=s.querySelector('.sh-b');
+    if(!g.length){box.innerHTML='<p class="hint">No duplicates in the folders you can see. If the server is still hashing files, this list will fill in on its own.</p>';return}
+    box.innerHTML='<div class="dup-l">'+g.map(function(grp,i){
+      var n=grp.n||((grp.paths||[]).length),meta=fs(grp.size||0)+' · '+n+' cop'+(n===1?'y':'ies');
+      return '<div class="dup-g" data-i="'+i+'"><div class="dup-h">'+esc(meta)+'</div>'+(grp.paths||[]).map(function(vp){
+        return '<button type="button" class="dup-row" data-p="'+esc(vp)+'"><span class="dup-n">'+esc(nameOf(vp))+'</span><span class="dup-p">'+esc(vp)+'</span></button>';
+      }).join('')+'</div>';
+    }).join('')+'</div>';
+    [].forEach.call(box.querySelectorAll('.dup-row'),function(b){b.onclick=function(){var vp=b.getAttribute('data-p');if(!vp)return;closeSheet();go(parentOf(vp))}})}
+  A.dupes().then(paint,function(){s.querySelector('.sh-b').innerHTML='<p class="hint">Could not load duplicates.</p>'})
 },
  settings:function(s){var th=A.theme(),u=A.user,c=A.perms();
   s.innerHTML=head('Settings','Changes apply right away and stay on this device.')+'<div class="sh-b">'+

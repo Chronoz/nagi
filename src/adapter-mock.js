@@ -67,6 +67,10 @@ var A={rootName:'Everything',user:'tri',
  unpost:function(paths){paths=paths||[];recentUps=recentUps.filter(function(f){return paths.indexOf(f.vp)<0});
    paths.forEach(function(vp){var d=parentOf(vp),t=T[d];if(!t)return;t.files=t.files.filter(function(e){return e.path!=vp});t.dirs=t.dirs.filter(function(e){return e.path!=vp})});
    return Promise.resolve('ok')},
+ dupes:function(){return Promise.resolve({ok:true,groups:[
+    {size:4823441,n:3,paths:['/Photos/IMG_1042.jpg','/Backup/IMG_1042.jpg','/Archive/2019/IMG_1042.jpg']},
+    {size:184320,n:2,paths:['/Notes/agenda.txt','/Archive/agenda-copy.txt']}
+  ]})},
  saveText:function(x,body,lastmod){NOTES[x.path]=body;var d=parentOf(x.path),t=T[d];
    (t&&t.files||[]).forEach(function(e){if(e.path==x.path){e.size=body.length;e.ts=Date.now()/1000}});
    return Promise.resolve({ok:true,lastmod:Date.now(),size:body.length})},

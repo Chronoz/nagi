@@ -19,6 +19,7 @@ Nagi is a skin for copyparty, a portable file server in one Python file. It only
 - **Players**: a music player with a queue (artist/title come from tags), plus video, image lightbox and text/markdown viewers. Each has a small download button next to the title. If you can write, you can Edit and Save `.md` and `.txt` notes right in the reader. Version history goes to the volume hist folder (`--md-hist v`), not next to the file
 - **Folder notes**: a folder with a `README.md` shows a short, sanitized note at the top of the listing; tap Show more to expand. Online-only (dataless) files are skipped and never opened
 - **Undo upload**: signed-in users with write access get a quiet “Undo upload” item under More. It lists your own recent uploads, including unfinished ones, and asks before deleting (Enter confirms, Esc cancels). Guests do not see it
+- **Duplicates**: signed-in users get a quiet “Duplicates” item under More. It lists groups of files with the same contents (size and path), read-only — remove an extra copy yourself from the usual menu. Guests do not see it. The server needs a content-hash index (`-e2dsa`, and no `--no-hash`). Nagi never enables `--dedup`, which would replace copies with links.
 - **iPhone Files**: Settings has one line on connecting the Files app (⋯ → Connect to Server) with this site’s address; WebDAV is already on
 - **Upload**: drag and drop anywhere or use the upload sheet. A quiet "3 files uploaded" note shows instead of a big toast. Uses copyparty's up2k, so uploads resume and dedup
 - **Safe bulk actions**: "Download all" asks first. Delete, rename, move, new folder and share links work the copyparty way
@@ -72,10 +73,10 @@ copyparty -p 3979 -i 127.0.0.1 \
   -v /path/to/your/files:/:r:rwmda,alice \
   -v ./nagi/theme:/.nagi:r \
   --themes 12 --theme 11 --u2j 4 --md-hist v --rw-edit md,txt \
-  --css-browser '/.nagi/nagi.css?nagi=f741974eae&cache=31536000' \
-  --js-browser  '/.nagi/nagi-late.js?nagi=72a233c738&cache=31536000' \
+  --css-browser '/.nagi/nagi.css?nagi=2133627ae0&cache=31536000' \
+  --js-browser  '/.nagi/nagi-late.js?nagi=b0b2854f27&cache=31536000' \
   --js-other    '/.nagi/nagi-pages.js?nagi=94536693d1&cache=31536000' \
-  --html-head-s '<link rel="stylesheet" href="/.nagi/nagi-pages.css?nagi=feede5270a&cache=31536000"><link rel="manifest" href="/.nagi/manifest.json?nagi=b8ef2fba1e&cache=31536000"><link rel="apple-touch-icon" href="/.nagi/icon-180.png?nagi=88d99dbc9b&cache=31536000"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Nagi"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><script nonce="{{ js_nonce }}" src="/.nagi/nagi-early.js?nagi=8d2ff78d8d&cache=31536000"></script><script nonce="{{ js_nonce }}" src="/.nagi/nagi.js?nagi=6281709725&cache=31536000"></script>' \
+  --html-head-s '<link rel="stylesheet" href="/.nagi/nagi-pages.css?nagi=feede5270a&cache=31536000"><link rel="manifest" href="/.nagi/manifest.json?nagi=b8ef2fba1e&cache=31536000"><link rel="apple-touch-icon" href="/.nagi/icon-180.png?nagi=88d99dbc9b&cache=31536000"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Nagi"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><script nonce="{{ js_nonce }}" src="/.nagi/nagi-early.js?nagi=8d2ff78d8d&cache=31536000"></script><script nonce="{{ js_nonce }}" src="/.nagi/nagi.js?nagi=3b39cb2c77&cache=31536000"></script>' \
   --favico "凪 17282B EEE5D1" --no-robots
 ```
 
@@ -112,8 +113,8 @@ Prefer a config file? See [`examples/copyparty.conf`](examples/copyparty.conf), 
   u2j: 4
   md-hist: v
   rw-edit: md,txt
-  css-browser: /.nagi/nagi.css?nagi=f741974eae&cache=31536000
-  js-browser: /.nagi/nagi-late.js?nagi=72a233c738&cache=31536000
+  css-browser: /.nagi/nagi.css?nagi=2133627ae0&cache=31536000
+  js-browser: /.nagi/nagi-late.js?nagi=b0b2854f27&cache=31536000
   js-other: /.nagi/nagi-pages.js?nagi=94536693d1&cache=31536000
   html-head-s: <link rel="stylesheet" href="/.nagi/nagi-pages.css?nagi=feede5270a&cache=31536000"><link rel="manifest" href="/.nagi/manifest.json?nagi=b8ef2fba1e&cache=31536000"> …
 
