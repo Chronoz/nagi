@@ -855,6 +855,10 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         u = urllib.parse.urlparse(self.path)
         qs = urllib.parse.parse_qs(u.query)
+        if qs.get("stat") is not None:
+            rvol = rvol_of(self.headers, qs)
+            body, status = stat_vpath((qs.get("stat") or [""])[0], rvol)
+            return self._json(body, status)
         if u.path in ("/health", "/status", "/sem") and not qs.get("q"):
             return self._json(status())
         if u.path in ("/search", "/sem") or qs.get("q"):
@@ -893,6 +897,78 @@ def serve():
 
 
 # --on404 entry: copyparty does `mod.main(cli, vn, rem)`
+
+def _vpath_norm(p):
+    raw = urllib.parse.unquote(p or "")
+    parts = []
+    for part in raw.replace("\\", "/").split("/"):
+        if part in ("", "."):
+            continue
+        if part == "..":
+            return None
+        parts.append(part)
+    return "/" + "/".join(parts)
+
+
+def _vol_for(vpath, volumes):
+    best = None
+    for vp, rp in volumes:
+        vp = vp if str(vp).startswith("/") else "/" + str(vp)
+        vp = vp.rstrip("/") or "/"
+        rp = os.path.abspath(os.path.expanduser(rp))
+        if vp == "/":
+            if best is None:
+                best = (vp, rp)
+        elif vpath == vp or vpath.startswith(vp + "/"):
+            if best is None or len(vp) > len(best[0].rstrip("/") or "/"):
+                best = (vp, rp)
+    return best
+
+
+def _rvol_has(vp, rvol):
+    vp = (vp.rstrip("/") or "/")
+    for rv in rvol or []:
+        rv = rv if str(rv).startswith("/") else "/" + str(rv)
+        rv = rv.rstrip("/") or "/"
+        if rv == vp:
+            return True
+    return False
+
+
+def stat_vpath(vpath, rvol):
+    """lstat only — never open or read the file (online-only / dataless safe)."""
+    vpath = _vpath_norm(vpath)
+    if not vpath:
+        return {"ok": False, "error": "bad path"}, 400
+    vol = _vol_for(vpath, vols_from_env())
+    if not vol:
+        return {"ok": False, "error": "not found"}, 404
+    vp, rp = vol
+    if not _rvol_has(vp, rvol):
+        return {"ok": False, "error": "not found"}, 404
+    if vp == "/":
+        rel = vpath.lstrip("/")
+    else:
+        rel = vpath[len(vp):].lstrip("/")
+    real = os.path.abspath(os.path.join(rp, rel))
+    root = os.path.abspath(rp)
+    if real != root and not real.startswith(root + os.sep):
+        return {"ok": False, "error": "not found"}, 404
+    try:
+        st = os.lstat(real)
+    except FileNotFoundError:
+        return {"ok": True, "exists": False, "dataless": False}, 200
+    except OSError:
+        return {"ok": False, "error": "not found"}, 404
+    return {
+        "ok": True,
+        "exists": True,
+        "dataless": bool(is_dataless(st)),
+        "size": int(getattr(st, "st_size", 0) or 0),
+        "isdir": bool(stat.S_ISDIR(st.st_mode)),
+    }, 200
+
+
 def main(cli, vn, rem):
     rem = (rem or "").strip("/")
     if rem != "sem":
@@ -901,6 +977,21 @@ def main(cli, vn, rem):
         q = ""
         if hasattr(cli, "uparam"):
             q = cli.uparam.get("q") or cli.uparam.get("sem") or ""
+        # ?stat=/path — lstat only, never open the file
+        if hasattr(cli, "uparam") and cli.uparam.get("stat") is not None:
+            uname = getattr(cli, "uname", "*") or "*"
+            rvol = list(getattr(cli, "rvol", None) or ["/"])
+            rvol = [("/" + v if v and not str(v).startswith("/") else (v or "/")) for v in rvol]
+            body_obj, status = stat_vpath(cli.uparam.get("stat") or "", rvol)
+            body = json.dumps(body_obj).encode("utf-8")
+            try:
+                cli.reply(body, status=status, mime="application/json")
+            except TypeError:
+                try:
+                    cli.reply(body, mime="application/json")
+                except TypeError:
+                    cli.reply(body)
+            return "true"
         uname = getattr(cli, "uname", "*") or "*"
         rvol = list(getattr(cli, "rvol", None) or ["/"])
         rvol = [("/" + v if v and not str(v).startswith("/") else (v or "/")) for v in rvol]

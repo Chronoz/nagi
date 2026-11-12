@@ -12,6 +12,7 @@ if(document.currentScript&&document.currentScript.nonce)window.__nagiNonce=docum
 var last={perms:[],acct:'*',cfg:{}};
 if(/[?&]pw=x\b/.test(location.search))try{history.replaceState(null,'',location.pathname)}catch(e){}
 function here(){var p=location.pathname;return p.endsWith('/')?p:p.replace(/[^\/]*$/,'')}
+function parentOf(p){return (p||'/').replace(/[^\/]+\/?$/,'')||'/'}
 function dec(s){try{return decodeURIComponent(s)}catch(e){return s}}
 function parseSize(s){var m=/([\d.]+)\s*([KMGTP]?)i?B/i.exec(s||'');if(!m)return null;return parseFloat(m[1])*Math.pow(1024,' KMGTP'.indexOf((m[2]||' ').toUpperCase()))}
 function post(url,body,type){return fetch(url,{method:'POST',credentials:'same-origin',headers:type?{'Content-Type':type}:{},body:body}).then(function(r){return r.text().then(function(t){if(r.status>=300)throw new Error((t||'').replace(/<[^>]+>/g,'').trim().slice(0,200)||('HTTP '+r.status));return t})})}
@@ -39,6 +40,22 @@ var A={
  url:function(x){return x.path},
  mdUrl:function(x){return x.path+'?v'},
  text:function(x){return fetch(x.path,{credentials:'same-origin'}).then(function(r){return r.text()})},
+ /* lstat-only probe via /.nagi/sem?stat=. Never opens the file. A missing sidecar means "not dataless". */
+ isDataless:function(x){if(!x||!x.path)return Promise.resolve(false);
+   return fetch('/.nagi/sem?stat='+encodeURIComponent(x.path),{credentials:'same-origin'}).then(function(r){
+     return r.json().then(function(j){return !!(j&&j.ok&&j.dataless)},function(){return false})},function(){return false})},
+ readme:function(files){var rd=null,i,L=files||[];
+   for(i=0;i<L.length;i++)if(!L[i].isDir&&/^README\.md$/i.test(L[i].name)){rd=L[i];break}
+   if(!rd)return Promise.resolve(null);
+   return A.isDataless(rd).then(function(dl){if(dl)return null;return A.text(rd).then(function(t){return {text:t,name:rd.name,path:rd.path,ts:rd.ts,size:rd.size}})})},
+ ups:function(){return fetch(here()+'?ups',{credentials:'same-origin'}).then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error((j&&j.error)||('HTTP '+r.status));return j})})},
+ unpost:function(paths){paths=(paths||[]).map(function(p){return dec(String(p).split('?')[0])});
+   return post('/?delete&unpost&lim='+paths.length,JSON.stringify(paths),'application/json').then(function(t){if(A.invalidate)paths.forEach(function(p){A.invalidate(parentOf(p))});return t})},
+ saveText:function(x,body,lastmod){var fd=new FormData();fd.append('act','tput');fd.append('lastmod',String(lastmod==null?-1:lastmod));fd.append('body',body);
+   return fetch(x.path,{method:'POST',credentials:'same-origin',body:fd}).then(function(r){return r.text().then(function(t){var j;try{j=JSON.parse(t)}catch(e){throw new Error((t||'').replace(/<[^>]+>/g,'').trim().slice(0,200)||('HTTP '+r.status))}
+     if(r.status>=300)throw new Error((t||'').replace(/<[^>]+>/g,'').trim().slice(0,200)||('HTTP '+r.status));
+     if(j&&j.ok&&A.invalidate){A.invalidate(parentOf(x.path));A.invalidate(x.path)}
+     return j})})},
  qr:function(u){return u+'?qr'},
  loginUrl:function(){return here()+'?h'},logoutUrl:function(){return here()+'?pw=x'},panelUrl:'/?h',
  zip:function(path,names){if(!names){location.href=path+'?zip';return}

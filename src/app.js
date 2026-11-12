@@ -60,7 +60,7 @@ function build(){
      '<section class="gd"><div class="stage"><svg class="g" aria-hidden="true"><g class="zoom"></g></svg><div class="lbs"></div><div class="tip"></div></div>'+
       '<div class="legend"><span><b>●</b>folder</span><span><b>◐</b>uploading</span><span><b>○</b>empty</span><span><i class="ct"></i>free space</span><span class="kh"><kbd>/</kbd>search <kbd>⇧U</kbd>upload <kbd>⌫</kbd>up</span><span class="sp"></span><span class="cnt"></span><div class="seg"><button data-v="garden">Garden</button><button data-v="list">List</button></div></div></section>'+
      '<aside class="ctx"><div class="drawer-h" aria-label="Expand"></div><nav class="crumb"></nav><div class="num"></div><p class="say"></p><p class="para"></p><div class="meter"><i></i></div>'+
-      '<div class="chh"></div><div class="chk" role="listbox" aria-multiselectable="true"></div><div class="acts"></div><div class="acts2 acts"></div>'+
+      '<div class="nrd" hidden></div><div class="chh"></div><div class="chk" role="listbox" aria-multiselectable="true"></div><div class="acts"></div><div class="acts2 acts"></div>'+
       '<div class="np"><div class="top"><span class="eq"><i></i><i></i><i></i></span><div class="t"><b></b><span></span></div>'+dlb(0)+'<div class="ctl">'+
        '<button class="ib" data-p="prev" aria-label="Previous" title="Previous">'+ic('skip-back')+'</button><button class="ib big" data-p="toggle" aria-label="Play or pause" title="Play / pause (space)">'+ic('pause')+'</button><button class="ib" data-p="next" aria-label="Next" title="Next">'+ic('skip-forward')+'</button></div></div>'+
        '<div class="seek"><span class="a">0:00</span><div class="bar"><i></i><b></b></div><span class="z">0:00</span></div></div>'+
@@ -70,7 +70,7 @@ function build(){
      '<div class="dz"><div>'+ic('cloud-upload')+'<h4>Drop to upload</h4><p></p></div></div>'+
     '</div><div class="toast"></div></div><nav class="bb" aria-label="Actions"></nav></div>');
   document.body.appendChild(root);
-  ['win','bd','fa','ctx','crumb','num','say','para','meter','chh','chk','acts','acts2','np','stage','lbs','tip','legend','veil','sheet','lbx','dz','toast','menu'].forEach(function(k){$[k]=root.querySelector('.'+k)});
+  ['win','bd','fa','ctx','crumb','num','say','para','meter','nrd','chh','chk','acts','acts2','np','stage','lbs','tip','legend','veil','sheet','lbx','dz','toast','menu'].forEach(function(k){$[k]=root.querySelector('.'+k)});
   $.tbn=root.querySelector('.tbn');$.mm=root.querySelector('.mm');$.msel=root.querySelector('.msel');$.mo=root.querySelector('.mo');$.bb=root.querySelector('.bb');root.appendChild($.mm);$.tbt=root.querySelector('.tbt');$.tav=root.querySelector('.tav');$.tav.onclick=function(){if(A.user)openSheet('settings');else signIn()};root.querySelector('.tbk').onclick=function(){up()};$.svg=root.querySelector('svg.g');$.zoom=root.querySelector('.zoom');$.gh=$.legend;$.cnt=root.querySelector('.cnt');
   root.querySelector('.srv').textContent='';
   addEventListener('resize',debounce(function(){render(false)},160));
@@ -98,7 +98,7 @@ function build(){
   // v3g mobile: actions live in a small overflow menu, never as big buttons
   $.mo.onclick=function(e){e.stopPropagation();var on=!$.mm.classList.contains('on');$.mm.classList.toggle('on',on);$.mo.setAttribute('aria-expanded',on)};
   document.addEventListener('click',function(e){if(st.pop&&!e.target.closest('.pop,.fa'))popClose()});
-  document.addEventListener('click',function(e){if($.mm.classList.contains('on')&&!e.target.closest('.mm,.bb .more')){$.mm.classList.remove('on');$.mo.setAttribute('aria-expanded','false')}});
+  document.addEventListener('click',function(e){if($.mm.classList.contains('on')&&!e.target.closest('.mm,.bb .more')){$.mm.classList.remove('on');$.mo.setAttribute('aria-expanded','false')}if(!e.target.closest('.fm')){[].forEach.call(root.querySelectorAll('.fmm.on'),function(m){m.classList.remove('on');var b=m.parentNode&&m.parentNode.querySelector('button');if(b)b.setAttribute('aria-expanded','false')})}});
   $.np.addEventListener('click',function(e){if(e.target.closest('.dl')){if(st.q[st.qi])download([st.q[st.qi]]);return}var b=e.target.closest('[data-p]');if(!b)return;({prev:prev,next:next,toggle:toggle})[b.dataset.p]()});
   $.np.querySelector('.bar').addEventListener('pointerdown',function(e){var r=this.getBoundingClientRect();if(au.duration)au.currentTime=au.duration*Math.min(1,Math.max(0,(e.clientX-r.left)/r.width));tick()});
   $.lbx.querySelector('.p').onclick=function(){lbStep(-1)};$.lbx.querySelector('.n').onclick=function(){lbStep(1)};$.lbx.querySelector('.x').onclick=lbClose;
@@ -215,6 +215,7 @@ function actList(sel){var L=[],can=A.perms(),k=kindOf(sel);
     var au=st.data.items.filter(function(x){return x.type=='audio'});
     if(au.length>1)L.push({t:'Play all '+au.length,i:'play',k:'P',f:function(){playList(au,0)}});
     if(A.canShare())L.push({t:'Share folder',i:'link',f:function(){openSheet('share',[st.path])}});
+    if(A.user&&can.write&&A.ups)L.push({t:'Undo upload',i:'undo-2',more:1,f:function(){openSheet('unpost')}});
     return L}
   var one=sel.length==1?sel[0]:null;
   if(k=='audio')L.push({t:one?'Play':'Play '+sel.length,i:'play',k:'P',f:function(){playList(sel,0)},main:1});
@@ -245,11 +246,17 @@ function renderActs(sel){var a=$.acts,b=$.acts2,fa=$.fa;a.innerHTML='';b.innerHT
   rest.forEach(function(o){if(o.i=='x')return;var m=el('<button role="menuitem" class="'+(o.danger?'danger':'')+'">'+ic(o.i)+'<span>'+esc(o.t)+'</span></button>');m.onclick=function(){$.mm.classList.remove('on');o.f()};$.mm.appendChild(m)});
   fa.classList.toggle('selm',!!sel.length);
   if(sel.length)fa.appendChild(el('<span class="fn">'+sel.length+' selected</span>'));
-  L.forEach(function(o,n){if(o.k)st.akeys[o.k]=o.f;var h=o.k?KEYS[o.k]:o.kh;
+  var quiet=[];
+  L.forEach(function(o,n){if(o.k)st.akeys[o.k]=o.f;if(o.more){quiet.push(o);return}var h=o.k?KEYS[o.k]:o.kh;
     var t=el('<button class="fb'+(o.danger?' danger':'')+'" title="'+esc(o.t)+(h?' ('+h+')':'')+'">'+ic(o.i)+'<span>'+esc(o.t)+'</span>'+(h?'<kbd>'+h+'</kbd>':'')+'</button>');t.onclick=o.f;fa.appendChild(t);
     // mobile drawer: first two as buttons, the rest quiet (second row when open)
     var tgt=n<3||!sel.length?a:b;if(!sel.length&&n>2)return;
-    tgt.appendChild(btn(o.t,o.danger?'danger':n==0?'fill':n==1?'':'quiet',o.f))})}
+    tgt.appendChild(btn(o.t,o.danger?'danger':n==0?'fill':n==1?'':'quiet',o.f))});
+  if(quiet.length){var wrap=el('<div class="fm"><button class="fb" aria-haspopup="menu" aria-expanded="false" title="More">'+ic('ellipsis')+'<span>More</span></button><div class="fmm" role="menu"></div></div>');
+    var mb=wrap.querySelector('button'),menu=wrap.querySelector('.fmm');
+    quiet.forEach(function(o){var m=el('<button role="menuitem" class="'+(o.danger?'danger':'')+'">'+ic(o.i)+'<span>'+esc(o.t)+'</span></button>');m.onclick=function(){menu.classList.remove('on');mb.setAttribute('aria-expanded','false');o.f()};menu.appendChild(m)});
+    mb.onclick=function(e){e.stopPropagation();var on=!menu.classList.contains('on');menu.classList.toggle('on',on);mb.setAttribute('aria-expanded',on)};
+    fa.appendChild(wrap)}}
 // v3g: "Download all" asks first (it is easy to misclick): a small popover under the button, a sheet on phones
 // v3k: the phone drawer follows the finger (handle + header; the list only when scrolled to the top), snaps by distance or flick
 function drawerDrag(){var c=$.ctx,H=c.querySelector('.drawer-h'),d=null,eat=false,tm=0;
@@ -383,7 +390,58 @@ function ghosts(gap){var b=st.band;if(!b)return '';var r=G.rng(G.hash(st.path+'|
   // a thin sliver along the far-left edge, as in Kanso
   var sh=Math.min(H*.62,150),sy=b.y1-sh-2;if(sh>40)svg+='<path class="gh f" d="'+G.path(G.roundRect(b.x0+1,sy,6,sh,3),3)+'"/>';
   return '<g class="ghosts" aria-hidden="true">'+svg+'</g>'}
-function render(anim){if(!st.data)return;if(!st.data.all)st.data.all=st.data.items;var actv=st.ups.filter(function(u){return u.dir==st.path&&u.state!='ok'}).map(function(u){return u.name});st.data.items=st.data.all.filter(function(x){return x.isDir||actv.indexOf(x.name)<0});$.tip.classList.remove('on');st.upSig=st.ups.filter(function(x){return x.dir==st.path&&x.state!='ok'}).map(function(x){return x.name}).join('|');ageTones(st.data.items);renderCtx();
+
+/* ---------- v3u: folder README (sanitized, collapsed) ---------- */
+function mdSafe(src){
+  var s=String(src||'').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  s=s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  s=s.replace(/```[\w-]*\n([\s\S]*?)```/g,function(_,c){return '<pre><code>'+c.replace(/\n$/,'')+'</code></pre>'});
+  s=s.replace(/`([^`]+)`/g,'<code>$1</code>');
+  s=s.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
+  s=s.replace(/(^|[^*\n])\*([^*\n]+)\*/g,'$1<em>$2</em>');
+  s=s.replace(/!\[([^\]]*)\]\([^)]+\)/g,'$1');
+  s=s.replace(/\[([^\]]+)\]\(([^)]+)\)/g,function(_,tx,u){u=String(u||'').trim();
+    if(/^(https?:\/\/|\/)[^\s<]*$/i.test(u)&&u.indexOf('javascript:')<0&&u.indexOf('data:')<0)
+      return '<a href="'+u.replace(/"/g,'&quot;')+'" rel="noopener noreferrer"'+(u.charAt(0)=='/'?'':' target="_blank"')+'>'+tx+'</a>';
+    return tx});
+  var lines=s.split('\n'),out=[],ul=0,i;
+  function flush(){if(ul){out.push('</ul>');ul=0}}
+  for(i=0;i<lines.length;i++){
+    var L=lines[i];
+    if(/^#{1,4} /.test(L)){flush();var n=Math.min(4,L.match(/^#+/)[0].length);out.push('<h'+ (n+3) +'>'+L.replace(/^#{1,4} /,'')+'</h'+(n+3)+'>')}
+    else if(/^[-*] /.test(L)){if(!ul){out.push('<ul>');ul=1}out.push('<li>'+L.replace(/^[-*] /,'')+'</li>')}
+    else if(L===''){flush()}
+    else if(/^<pre>/.test(L)||L.indexOf('<pre>')>=0){flush();out.push(L)}
+    else{if(ul)flush();out.push('<p>'+L+'</p>')}
+  }
+  flush();
+  return out.join('\n');
+}
+var rdCache={key:'',el:null};
+function loadReadme(d){
+  var box=$.nrd;if(!box||!A.readme){if(box){box.hidden=true;box.innerHTML=''}return}
+  var files=(d&&(d.files||d.items))||[],path=(d&&d.path)||st.path;
+  var rd=null,i;for(i=0;i<files.length;i++)if(!files[i].isDir&&/^README\.md$/i.test(files[i].name)){rd=files[i];break}
+  if(!rd){box.hidden=true;box.innerHTML='';rdCache.key='';return}
+  var key=rd.path+'@'+(rd.ts||'')+'@'+(rd.size||'');
+  if(rdCache.key===key&&rdCache.html){box.innerHTML=rdCache.html;box.hidden=false;bindReadme(box);return}
+  A.readme(files).then(function(r){
+    if(st.path!==path)return;
+    if(!r||!r.text||!String(r.text).trim()){box.hidden=true;box.innerHTML='';rdCache.key='';return}
+    var raw=String(r.text);if(raw.length>200000)raw=raw.slice(0,200000)+'\n…';
+    var html='<div class="nrd-inner"><div class="nrd-body">'+mdSafe(raw)+'</div><button type="button" class="nrd-more" hidden>Show more</button></div>';
+    rdCache={key:key,html:html};box.innerHTML=html;box.hidden=false;bindReadme(box);
+  },function(){box.hidden=true;box.innerHTML=''});
+}
+function bindReadme(box){
+  var inner=box.querySelector('.nrd-body'),btn=box.querySelector('.nrd-more');if(!inner||!btn)return;
+  var need=inner.scrollHeight>inner.clientHeight+8;
+  btn.hidden=!need;btn.textContent='Show more';inner.classList.remove('open');
+  btn.onclick=function(){var on=inner.classList.toggle('open');btn.textContent=on?'Show less':'Show more'};
+}
+function cancelEdit(){if(st._ed&&st._edLeave)st._edLeave()}
+
+function render(anim){if(!st.data)return;if(!st.data.all)st.data.all=st.data.items;var actv=st.ups.filter(function(u){return u.dir==st.path&&u.state!='ok'}).map(function(u){return u.name});st.data.items=st.data.all.filter(function(x){return x.isDir||actv.indexOf(x.name)<0});$.tip.classList.remove('on');st.upSig=st.ups.filter(function(x){return x.dir==st.path&&x.state!='ok'}).map(function(x){return x.name}).join('|');ageTones(st.data.items);renderCtx();loadReadme(st.data);
   [].forEach.call($.gh.querySelectorAll('.seg button'),function(b){b.classList.toggle('on',b.dataset.v==st.view)});
   var nd=st.data.items.filter(function(x){return x.isDir}).length,nf=st.data.items.length-nd;$.cnt.textContent=pl(nd,'folder')+' · '+(nf==1?'1 file':nf+' files');
   $.tav.innerHTML=A.user?'<b>'+esc(A.user.charAt(0).toUpperCase())+'</b>':ic('user');$.tav.classList.toggle('in',!!A.user);$.tav.setAttribute('aria-label',A.user?'Account: signed in as '+A.user:'Sign in');
@@ -530,7 +588,7 @@ function openSheet(kind,arg){st.sheet=kind;var s=$.sheet;s.className='sheet'+(ki
   var inp=s.querySelector('input[data-autofocus]');if(inp)setTimeout(function(){focusQuiet(inp)},200)}
 function signIn(){location.href=A.loginUrl()}
 function signOut(){location.href=A.logoutUrl()}
-function closeSheet(){if(!st.sheet)return;st.sheet=null;$.sheet.classList.remove('on');$.veil.classList.remove('on');[].forEach.call($.menu.querySelectorAll('[data-m]'),function(b){b.classList.remove('on')});
+function closeSheet(){if(!st.sheet)return;st._unAsk=null;st._ed=null;st.sheet=null;$.sheet.classList.remove('on');$.veil.classList.remove('on');[].forEach.call($.menu.querySelectorAll('[data-m]'),function(b){b.classList.remove('on')});
   var v=$.sheet.querySelector('video');if(v)v.pause();pinWin();setTimeout(function(){if(!st.sheet){$.sheet.innerHTML='';pinWin()}},450)}
 function dlb(k){return '<button class="ib sm dl" aria-label="Download" title="Download'+(k?' (⇧S)':'')+'">'+ic('download')+'</button>'}
 function head(t,p,dl){return '<div class="sh-h"><div><div class="sh-t"><h3>'+t+'</h3>'+(dl?dlb(1):'')+'</div>'+(p?'<p>'+p+'</p>':'')+'</div><button class="ib sh-x" aria-label="Close" title="Close (Esc)">'+ic('x')+'</button></div>'}
@@ -700,6 +758,37 @@ var SHEETS={
     });
   }
     inp.oninput=debounce(run,220);run()},
+ unpost:function(s){
+  st._unAsk=null;
+  s.classList.add('unp');
+  s.innerHTML=head('Undo upload','Your recent uploads, including unfinished ones.')+'<div class="sh-b"><p class="hint">Loading…</p></div>';
+  function decp(vp){vp=String(vp||'').split('?')[0];try{return decodeURIComponent(vp)}catch(e){return vp}}
+  function nameOf(vp){var p=decp(vp).split('/').filter(Boolean);return p.length?p[p.length-1]:vp}
+  function paint(j){
+    var f=(j&&j.f)||[],box=s.querySelector('.sh-b');
+    if(!f.length){box.innerHTML='<p class="hint">Nothing to undo.</p>';return}
+    box.innerHTML='<p class="hint">These are yours. Removing one deletes it from the server.</p><div class="un-l">'+f.map(function(u,i){
+      var vp=decp(u.vp),done=u.pd===undefined,meta=(done?fs(u.sz||0):((u.pd||0)+'% · not finished'))+' · '+rel(u.at);
+      return '<button type="button" class="un-row" data-i="'+i+'"><span class="un-n">'+esc(nameOf(vp))+'</span><span class="un-p">'+esc(vp)+'</span><span class="un-m">'+esc(meta)+'</span></button>';
+    }).join('')+'</div><div class="un-ask" hidden></div>';
+    [].forEach.call(box.querySelectorAll('.un-row'),function(b){b.onclick=function(){askUndo(f[+b.dataset.i])}});
+  }
+  function askUndo(u){
+    var vp=decp(u.vp),done=u.pd===undefined,ask=s.querySelector('.un-ask');
+    ask.hidden=false;
+    ask.innerHTML='<p>Remove “'+esc(nameOf(vp))+'”'+(done?' from the server':' — cancel this unfinished upload')+'?</p><div class="un-acts"><button type="button" class="btn fill ok">Undo</button><button type="button" class="btn quiet no">Cancel</button><span class="ph"><kbd>↵</kbd><kbd>Esc</kbd></span></div>';
+    st._unAsk={vp:vp,box:ask};
+    ask.querySelector('.ok').onclick=function(){doUndo(vp)};
+    ask.querySelector('.no').onclick=function(){ask.hidden=true;st._unAsk=null};
+    setTimeout(function(){var o=ask.querySelector('.ok');if(o)focusQuiet(o)},60);
+  }
+  function doUndo(vp){
+    var ask=s.querySelector('.un-ask');if(ask){ask.querySelectorAll('button').forEach(function(b){b.disabled=true})}
+    A.unpost([vp]).then(function(){st._unAsk=null;upNote('Upload undone');if(A.invalidate)A.invalidate();reload();if(st.sheet==='unpost')SHEETS.unpost(s)},
+      function(e){st._unAsk=st._unAsk||{box:ask};if(ask){ask.hidden=false;ask.innerHTML='<p>Could not undo: '+esc(e.message||e)+'</p><div class="un-acts"><button type="button" class="btn quiet no">Close</button></div>';ask.querySelector('.no').onclick=function(){ask.hidden=true;st._unAsk=null}}});
+  }
+  A.ups().then(paint,function(){s.querySelector('.sh-b').innerHTML='<p class="hint">Could not load recent uploads.</p>'})
+},
  settings:function(s){var th=A.theme(),u=A.user,c=A.perms();
   s.innerHTML=head('Settings','Changes apply right away and stay on this device.')+'<div class="sh-b">'+
    '<div class="lab">Light</div><div class="choice" style="--n:3">'+
@@ -710,6 +799,7 @@ var SHEETS={
     (A.classic?'<div class="tg" data-x="classic"><div><b>Classic copyparty view</b><span>Every tool, the original layout, same Nagi colours</span></div>'+ic('arrow-right')+'</div>':'')+
     (A.panelUrl?'<div class="tg" data-x="panel"><div><b>Control panel</b><span>Volumes, recent uploads, shares, connect as a drive</span></div>'+ic('arrow-right')+'</div>':'')+
    '<div class="lab">Account</div>'+(u?'<div class="tg" data-x="out"><div><b>Signed in as '+esc(u)+'</b><span>Sign out on this browser</span></div>'+ic('log-out')+'</div>':'<div class="tg" data-x="in"><div><b>You are browsing as a guest</b><span>Sign in to upload, share and tidy up</span></div>'+ic('log-in')+'</div>')+
+   '<p class="hint dav-tip">On an iPhone: in the Files app, tap ⋯ then Connect to Server, and enter this site’s address (WebDAV is already on). Use the same sign-in as Nagi.</p>'+
    '<p class="hint" style="margin-top:22px">Nagi 凪 · a calm skin for copyparty. Icons: Lucide (ISC).</p></div>';
   [].forEach.call(s.querySelectorAll('[data-t]'),function(b){b.onclick=function(){A.setTheme(b.dataset.t);[].forEach.call(s.querySelectorAll('[data-t]'),function(o){o.classList.toggle('on',o==b)});setTimeout(function(){wallpaper();render(false)},30)}});
   [].forEach.call(s.querySelectorAll('[data-se]'),function(b){b.onclick=function(){if(A.setEngine)A.setEngine(b.dataset.se);[].forEach.call(s.querySelectorAll('[data-se]'),function(o){o.classList.toggle('on',o==b)})}});
@@ -735,11 +825,36 @@ var SHEETS={
   var v=s.querySelector('video'),bad=function(){var b=s.querySelector('.sh-b');if(!b||!b.contains(v))return;v.removeAttribute('src');try{v.load()}catch(_){}b.innerHTML=vno(ext,apple,x,1);wire()},
    wire=function(){var d=s.querySelector('.vdl');if(d)d.onclick=function(){download([x])}};
   wire();if(v){v.addEventListener('error',bad);var p=v.play&&v.play();if(p&&p.catch)p.catch(function(e){if(e&&e.name=='NotSupportedError')bad()})}},
- read:function(s,x){st.sx=x;var md=/\.md$/i.test(x.name);s.innerHTML=head(esc(x.name),fs(x.size)+' · '+esc(rel(x.ts)),1)+'<div class="sh-b" style="position:relative;padding:0 6px 6px">'+(md&&A.mdUrl?'<iframe class="reader" title="'+esc(x.name)+'" src="'+esc(A.mdUrl(x))+'"></iframe>':'<pre class="txt" style="padding:10px 22px 30px">Loading…</pre>')+'</div>';
-  var ifr=s.querySelector('iframe');if(ifr)ifr.addEventListener('load',function(){try{ifr.contentDocument.documentElement.classList.add('nagi-embed')}catch(e){}});
+ read:function(s,x){st.sx=x;st._ed=null;st._edForce=false;
+  var md=/\.md$/i.test(x.name),txt=/\.txt$/i.test(x.name),canEd=!!(A.perms().write&&A.saveText&&(md||txt));
+  s.innerHTML=head(esc(x.name),fs(x.size)+' · '+esc(rel(x.ts)),1)+'<div class="sh-b rd-b" style="position:relative;padding:0 6px 6px">'+(md&&A.mdUrl?'<iframe class="reader" title="'+esc(x.name)+'" src="'+esc(A.mdUrl(x))+'"></iframe>':'<pre class="txt" style="padding:10px 22px 30px">Loading…</pre>')+'<textarea class="ed" hidden spellcheck="false" aria-label="Edit '+esc(x.name)+'"></textarea></div>';
+  var ifr=s.querySelector('iframe'),pre=s.querySelector('pre.txt'),ta=s.querySelector('textarea.ed'),bar=s.querySelector('.sh-t');
+  if(ifr)ifr.addEventListener('load',function(){try{ifr.contentDocument.documentElement.classList.add('nagi-embed')}catch(e){}});
   s.querySelector('.dl').onclick=function(){download([x])};
-  if(!(md&&A.mdUrl))A.text(x).then(function(t){var p=s.querySelector('pre');if(p)p.textContent=t.length>200000?t.slice(0,200000)+'\n…':t})}
+  var body='',lm=Math.round(Number(x.ts||0)*1000);
+  function setView(t){body=t||'';if(pre)pre.textContent=body.length>200000?body.slice(0,200000)+'\n…':body}
+  if(!(md&&A.mdUrl))A.text(x).then(setView);else if(canEd)A.text(x).then(function(t){body=t});
+  if(canEd){bar.insertAdjacentHTML('beforeend','<button class="ib sm ed-go" aria-label="Edit" title="Edit">'+ic('pencil')+'</button><button class="ib sm ed-save" hidden aria-label="Save" title="Save">'+ic('save')+'</button><button class="ib sm ed-cx" hidden aria-label="Cancel editing" title="Cancel">'+ic('x')+'</button><span class="ed-note" hidden role="status"></span>');
+    var go=s.querySelector('.ed-go'),sv=s.querySelector('.ed-save'),cx=s.querySelector('.ed-cx'),note=s.querySelector('.ed-note');
+    function showNote(m,err){note.hidden=!m;note.className='ed-note'+(err?' err':'');note.textContent=m||''}
+    function enter(){function start(t){body=t||'';ta.value=body;ta.hidden=false;if(ifr)ifr.hidden=true;if(pre)pre.hidden=true;go.hidden=true;sv.hidden=false;cx.hidden=false;st._ed=1;showNote('');setTimeout(function(){ta.focus()},80)}
+      if(body)start(body);else A.text(x).then(start,function(){start('')})}
+    function leave(t){st._ed=null;st._edForce=false;ta.hidden=true;if(ifr){ifr.hidden=false;if(t!=null&&A.mdUrl)ifr.src=A.mdUrl(x)+(A.mdUrl(x).indexOf('?')>=0?'&':'?')+'_='+Date.now()}if(pre)pre.hidden=false;go.hidden=false;sv.hidden=true;cx.hidden=true;if(t!=null)setView(t);showNote('')}
+    go.onclick=enter;cx.onclick=function(){leave()};
+    sv.onclick=function(){var v=ta.value;
+      function fail(e){sv.disabled=false;showNote((e&&e.message)||'Could not save',true)}
+      function after(j,used){sv.disabled=false;
+        if(j&&j.ok){lm=j.lastmod||Date.now();x.ts=lm/1000;leave(v);upNote('Saved');return}
+        // listing ts is seconds; the server lastmod is milliseconds — retry once with the exact value
+        if(!st._edForce&&j&&j.lastmod!=null&&used!=-1&&Math.abs(j.lastmod-used)<1000){
+          sv.disabled=true;showNote('Saving…');A.saveText(x,v,j.lastmod).then(function(j2){after(j2,-1)},fail);return}
+        st._edForce=true;showNote('This note changed on the server. Save again to overwrite.',true)}
+      var use=st._edForce?-1:lm;sv.disabled=true;showNote('Saving…');
+      A.saveText(x,v,use).then(function(j){after(j,use)},fail)}
+    st._edLeave=leave}
+}
 };
+
 function renderOpts(box){if(!box||!A.uploadOpts)return;var o=A.uploadOpts();box.innerHTML=o.map(function(x,i){if(x.choices)return '<div class="tg ch" data-i="'+i+'"><div><b>'+esc(x.label)+'</b><span>'+esc(x.choices[x.value])+'</span></div>'+ic('chevrons-up-down')+'</div>';return '<div class="tg'+(x.value?' on':'')+'" data-i="'+i+'"><div><b>'+esc(x.label)+'</b><span>'+esc(x.hint)+'</span></div><span class="sw2"></span></div>'}).join('');
   [].forEach.call(box.querySelectorAll('.tg'),function(r){r.onclick=function(){var x=o[r.dataset.i];x.set(x.choices?(x.value+1)%x.choices.length:!x.value);renderOpts(box)}})}
 var lastOk=0;
@@ -785,9 +900,10 @@ function keys(){addEventListener('keydown',function(e){
     if(k=='v'&&st.clip){e.preventDefault();e.stopImmediatePropagation();doPaste(st.path);return}
   }
   if(st.pop){if(e.key=='Escape'){popClose()}else if(e.key=='Enter'){e.preventDefault();st.pop.ok()}else if(e.key=='Tab'){e.preventDefault();var bs=st.pop.el.querySelectorAll('button'),i=[].indexOf.call(bs,document.activeElement);bs[(i+(e.shiftKey?bs.length-1:1))%bs.length].focus()}else return;e.stopImmediatePropagation();return}
-  if(e.key=='Escape'){if(st.lb)lbClose();else if(st.sheet)closeSheet();else if(st.sel.length){st.sel=[];refresh()}else if(st.clip)clearClip();e.stopImmediatePropagation();return}
-  if(typing){return}
+  if(e.key=='Escape'){if(st.lb)lbClose();else if(st.sheet=='unpost'&&st._unAsk){st._unAsk.box.hidden=true;st._unAsk=null}else if(st.sheet=='read'&&st._ed){cancelEdit()}else if(st.sheet)closeSheet();else if(st.sel.length){st.sel=[];refresh()}else if(st.clip)clearClip();e.stopImmediatePropagation();return}
+  if(typing&&!(st.sheet=='unpost'&&st._unAsk)){return}
   if(st.sheet=='ask'&&e.key=='Enter'){var ok=$.sheet.querySelector('.ok');if(ok){e.preventDefault();ok.click()}e.stopImmediatePropagation();return}
+  if(st.sheet=='unpost'&&st._unAsk&&e.key=='Enter'){var uo=$.sheet.querySelector('.un-ask .ok');if(uo){e.preventDefault();uo.click()}e.stopImmediatePropagation();return}
   var k=e.key,used=true;
   if(st.lb&&(k=='ArrowLeft'||k=='ArrowRight'))lbStep(k=='ArrowLeft'?-1:1);
   else if(k=='/'){e.preventDefault();openSheet('search')}

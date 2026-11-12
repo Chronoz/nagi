@@ -16,9 +16,9 @@ exec $CP -i "${BIND:-127.0.0.1}" -p "${PORT:-3979}" \
   -a "$NAGI_USER:$NAGI_PASS" --usernames \
   -v "$ROOT:/:r:rwmda.,$NAGI_USER" \
   -v "$HERE/theme:/.nagi:r" \
-  --shr /shr -e2dsa -e2ts --u2j 4 \
+  --shr /shr -e2dsa -e2ts --u2j 4 --md-hist v --rw-edit md,txt \
   --themes 12 --theme 11 \
-  --css-browser '/.nagi/nagi.css?nagi=ad3358511e&cache=31536000' --js-browser '/.nagi/nagi-late.js?nagi=e218759e4f&cache=31536000' \
+  --css-browser '/.nagi/nagi.css?nagi=f741974eae&cache=31536000' --js-browser '/.nagi/nagi-late.js?nagi=72a233c738&cache=31536000' \
   --js-other '/.nagi/nagi-pages.js?nagi=94536693d1&cache=31536000' \
-  --html-head-s '<link rel="stylesheet" href="/.nagi/nagi-pages.css?nagi=35e1f3e388&cache=31536000"><link rel="manifest" href="/.nagi/manifest.json?nagi=b8ef2fba1e&cache=31536000"><link rel="apple-touch-icon" href="/.nagi/icon-180.png?nagi=88d99dbc9b&cache=31536000"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Nagi"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><script nonce="{{ js_nonce }}" src="/.nagi/nagi-early.js?nagi=8d2ff78d8d&cache=31536000"></script><script nonce="{{ js_nonce }}" src="/.nagi/nagi.js?nagi=80648369ea&cache=31536000"></script>' \
+  --html-head-s '<link rel="stylesheet" href="/.nagi/nagi-pages.css?nagi=feede5270a&cache=31536000"><link rel="manifest" href="/.nagi/manifest.json?nagi=b8ef2fba1e&cache=31536000"><link rel="apple-touch-icon" href="/.nagi/icon-180.png?nagi=88d99dbc9b&cache=31536000"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Nagi"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><script nonce="{{ js_nonce }}" src="/.nagi/nagi-early.js?nagi=8d2ff78d8d&cache=31536000"></script><script nonce="{{ js_nonce }}" src="/.nagi/nagi.js?nagi=6281709725&cache=31536000"></script>' \
   --favico "凪 17282B EEE5D1" --no-robots --name nagi

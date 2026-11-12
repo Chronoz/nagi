@@ -20,7 +20,7 @@ var ph=mkdir('/','Photos',now-86400);['Kyoto, Autumn','Rooftops','Night Walks','
 var vi=mkdir('/','Video',now-86400*3);['Evening Walk','Harbour at Dusk','Tram Window','Rain Timelapse'].forEach(function(n){file(vi,n.toLowerCase().replace(/ /g,'-')+'.mp4',ri(4,60)*GB)});var vd=mkdir(vi,'Home Movies');for(var i=0;i<6;i++)file(vd,'tape-'+(i+1)+'.mkv',ri(6,30)*GB);
 var bk=mkdir('/','Backups',now-86400*2);['phone-2026-09.tar.gz','laptop-home.zip','router-config.bin','photos-2024.tar','mail-archive.zip'].forEach(function(n){file(bk,n,ri(2,60)*GB)});
 var pr=mkdir('/','Projects');['nagi-theme','tea-timer','garden-planner','dotfiles'].forEach(function(n,k){var d=mkdir(pr,n);['README.md','index.html','app.js','style.css','build.py','assets.zip'].forEach(function(f){file(d,f,f=='assets.zip'?ri(2,12)*GB:ri(4,90)*1e3)})});
-var dc=mkdir('/','Documents');['tea-list.md','apartment-notes.txt','budget-2026.csv','reading.md','lease-2026.pdf','tax-return-2025.pdf','manual-kettle.pdf'].forEach(function(n){file(dc,n,n.endsWith('pdf')?ri(1,9)*MB:ri(2,40)*1e3)});var rc=mkdir(dc,'Scans');for(var i=0;i<9;i++)file(rc,'scan-'+(i+1)+'.pdf',ri(2,9)*GB/10);
+var dc=mkdir('/','Documents');['README.md','tea-list.md','apartment-notes.txt','budget-2026.csv','reading.md','lease-2026.pdf','tax-return-2025.pdf','manual-kettle.pdf'].forEach(function(n){file(dc,n,n.endsWith('pdf')?ri(1,9)*MB:ri(2,40)*1e3)});var rc=mkdir(dc,'Scans');for(var i=0;i<9;i++)file(rc,'scan-'+(i+1)+'.pdf',ri(2,9)*GB/10);
 var dl=mkdir('/','Downloads');['train-timetable.pdf','font-specimen.zip','wallpaper-dusk.jpg','ubuntu-26.04.iso','podcast-ep-41.mp3'].forEach(function(n){file(dl,n,/iso/.test(n)?6*GB:ri(2,90)*MB)});
 mkdir('/','Inbox');
 var eb=mkdir('/','Ebooks');['Kusamakura.epub','Walden.epub','In Praise of Shadows.epub','The Book of Tea.epub'].forEach(function(n){file(eb,n,ri(1,4)*MB)});
@@ -38,6 +38,17 @@ var tone=(function(){var C={};return function(x){var k=x.path;if(C[k])return C[k
   for(var i=0;i<n;i++){var env=Math.min(1,i/4000,(n-i)/8000);b[44+i]=128+Math.round(18*env*Math.sin(2*Math.PI*f*i/sr)*(0.6+0.4*Math.sin(i/sr*1.3)))}
   var bin='';for(var i=0;i<b.length;i+=8192)bin+=String.fromCharCode.apply(null,b.subarray(i,i+8192));return C[k]='data:audio/wav;base64,'+btoa(bin)}})();
 var ups=[],cur='/';
+var NOTES={};
+var recentUps=[
+  {vp:'/Downloads/wallpaper-dusk.jpg',sz:6.8*MB,at:now-400},
+  {vp:'/Documents/tea-list.md',sz:14e3,at:now-80},
+  {vp:'/Inbox/draft.md',sz:2400,at:now-20,pd:47}
+];
+function parentOf(p){return (p||'/').replace(/[^\/]+\/?$/,'')||'/'}
+function noteOf(x){if(NOTES[x.path])return NOTES[x.path];
+  if(/README\.md$/i.test(x.name))return '# Notes for this folder\n\nA short welcome that sits quietly at the top of the listing.\n\n- Tea at four.\n- The quiet is the point.\n\n## More\n\nThis extra paragraph is here so the note can expand. It is still just a fictional mockup, with a [calm link](https://example.com).\n\nYou can edit this in the reader if you have write access.\n';
+  if(/budget/.test(x.name))return 'month,rent,food\n1,1200,340\n2,1200,310\n3,1200,365\n';
+  return '# '+x.name+'\n\nA fictional note in the Nagi mockup.\n\n- The quiet is the point.\n- Tea at four.\n'}
 var A={rootName:'Everything',user:'tri',
  start:function(){return location.hash.replace(/^#/,'')||'/'},here:function(){return location.hash.replace(/^#/,'')||'/'},
  go:function(p){cur=p;history.pushState({},'','#'+p)},
@@ -47,7 +58,18 @@ var A={rootName:'Everything',user:'tri',
  setDots:function(v){document.cookie=v?'dots=y;path=/;SameSite=Lax;max-age=31536000':'dots=;path=/;SameSite=Lax;max-age=0'},
  url:function(x){if(/\.(flac|mp3|wav)$/i.test(x.name))return tone(x);if(/\.(jpe?g|png)$/i.test(x.name))return img(NagiGarden.hash(x.path),1600,1100);return '#'},
  thumb:function(x){return /\.(jpe?g|png)$/i.test(x.name)?img(NagiGarden.hash(x.path),320,240):null},
- text:function(x){return Promise.resolve(/budget/.test(x.name)?'month,rent,food\n1,1200,340\n2,1200,310\n3,1200,365\n':'# '+x.name+'\n\nA fictional note in the Nagi mockup.\n\n- The quiet is the point.\n- Tea at four.\n')},
+ text:function(x){return Promise.resolve(noteOf(x))},
+ isDataless:function(){return Promise.resolve(false)},
+ readme:function(files){var rd=null,i,L=files||[];for(i=0;i<L.length;i++)if(!L[i].isDir&&/^README\.md$/i.test(L[i].name)){rd=L[i];break}
+   if(!rd)return Promise.resolve(null);
+   return Promise.resolve({text:noteOf(rd),name:rd.name,path:rd.path,ts:rd.ts,size:rd.size})},
+ ups:function(){return Promise.resolve({f:recentUps.slice(),nu:recentUps.filter(function(x){return x.pd!=null}).length,nc:recentUps.filter(function(x){return x.pd==null}).length})},
+ unpost:function(paths){paths=paths||[];recentUps=recentUps.filter(function(f){return paths.indexOf(f.vp)<0});
+   paths.forEach(function(vp){var d=parentOf(vp),t=T[d];if(!t)return;t.files=t.files.filter(function(e){return e.path!=vp});t.dirs=t.dirs.filter(function(e){return e.path!=vp})});
+   return Promise.resolve('ok')},
+ saveText:function(x,body,lastmod){NOTES[x.path]=body;var d=parentOf(x.path),t=T[d];
+   (t&&t.files||[]).forEach(function(e){if(e.path==x.path){e.size=body.length;e.ts=Date.now()/1000}});
+   return Promise.resolve({ok:true,lastmod:Date.now(),size:body.length})},
  qr:null,loginUrl:function(){return 'login.html'},logoutUrl:function(){return 'login.html'},panelUrl:null,
  zip:function(){NagiApp&&document.querySelector('#nagi .toast')&&(function(){var t=document.querySelector('#nagi .toast');t.innerHTML='<i class="ni" style="--ni:var(--ni-download)"></i> In copyparty this downloads a zip';t.classList.add('on');setTimeout(function(){t.classList.remove('on')},2400)})()},
  search:function(q){q=q.toLowerCase();var out=[];Object.keys(T).forEach(function(d){T[d].files.concat(T[d].dirs).forEach(function(e){var hay=(e.name+' '+(e.tags.artist||'')+' '+(e.tags.album||'')).toLowerCase();if(hay.indexOf(q)>=0)out.push({name:e.name,path:e.path,dir:e.isDir?e.path:d,size:e.size,ts:e.ts,tags:e.tags,isDir:!!e.isDir})})});return new Promise(function(r){setTimeout(function(){r(out)},180)})},
