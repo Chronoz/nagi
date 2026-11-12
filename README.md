@@ -23,6 +23,7 @@ Nagi is a skin for copyparty, a portable file server in one Python file. It only
 - **iPhone / PWA**: add it to your home screen and it opens like an app. Bottom tab bar with big tap targets, account menu in More, safe-area aware, no pull-to-refresh or zoom on inputs
 - **Accessible**: keyboard shortcuts, focus traps in dialogs, `prefers-reduced-motion` respected
 - **Smart search**: in Settings, pick **Smart (EmbeddingGemma 2)** or copyparty’s **Default** filename index. The search drawer looks the same either way. If the Smart sidecar is down, it falls back to Default on its own. The extension is one Python file; see [`ext/`](ext/README.md)
+- **Hidden files**: logged-in users with permission can turn on **Show hidden files** in Settings (dotfiles and folders starting with a period). Guests never see the setting, and the server will not list those names to them. They are not indexed.
 
 | | |
 |---|---|

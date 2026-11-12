@@ -32,7 +32,7 @@ never see a volume they cannot read (e.g. /terry).
 
 Smart index: filenames + text from txt/md/code/pdf/docx/rtf. Images and
 video are name-only (no captions). Dataless / online-only files are
-skipped. Vectors are 256-d Matryoshka, L2-normalised, in one SQLite
+skipped. Dotfiles and dotfolders are never indexed. Vectors are 256-d Matryoshka, L2-normalised, in one SQLite
 file with FTS5, kept outside Dropbox. Ranking is DigUp-style: cosine
 plus keyword, with a higher keyword weight for identifier-like queries.
 
@@ -135,9 +135,10 @@ def is_dataless(st):
 
 
 def skip_name(name):
-    if name in SKIP_DIR or name.startswith("._"):
+    # never index dotfiles / dotfolders (or AppleDouble / Icon\r)
+    if not name or name.startswith(".") or name.startswith("._") or name == "Icon\r":
         return True
-    if name in (".DS_Store", "Icon\r"):
+    if name in SKIP_DIR:
         return True
     return False
 
@@ -753,6 +754,8 @@ def search(q, rvol, limit=40):
     for fid, text, blob, vol, vp, sz, mt, path in rows:
         if not allowed_vol(vol, rvol):
             continue
+        if any((p or "").startswith(".") for p in (vp or "").split("/")):
+            continue
         name = os.path.basename(path)
         body = fts_ids.get(fid, (name, text))[1]
         kw = kw_score(q, name, (text or "") + " " + (body or ""))
@@ -774,6 +777,8 @@ def search(q, rvol, limit=40):
             continue
         row = c.execute("select vol,vpath,size,mtime,path from files where id=?", (fid,)).fetchone()
         if not row or not allowed_vol(row[0], rvol):
+            continue
+        if any((p or "").startswith(".") for p in (row[1] or "").split("/")):
             continue
         kw = kw_score(q, name, body)
         if kw <= 0:

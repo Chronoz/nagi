@@ -21,12 +21,14 @@ var A={
  rootName:'Everything',
  start:here,here:here,
  go:function(p){try{if(window.treectl&&treectl.goto){treectl.goto(p,true);return}}catch(e){}history.pushState({},'',p)},
- ls:function(path){return fetch(path+'?ls',{credentials:'same-origin',headers:{Accept:'application/json'}}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}).then(function(j){
+ dots:function(){return /(?:^|;\s*)dots=y(?:;|$)/.test(document.cookie)},
+ setDots:function(v){document.cookie=v?'dots=y;path=/;SameSite=Lax;max-age=31536000':'dots=;path=/;SameSite=Lax;max-age=0';if(A.invalidate)A.invalidate()},
+ ls:function(path){return fetch(path+'?ls'+(A.dots&&A.dots()?'&dots':''),{credentials:'same-origin',headers:{Accept:'application/json'}}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}).then(function(j){
    if(path==here()){last=j;A.user=j.acct&&j.acct!='*'?j.acct:null}
    var fr=/([\d.]+\s*\S+)\s+free of\s+([\d.]+\s*\S+)/.exec(j.srvinf||''),free=fr?parseSize(fr[1]):null,total=fr?parseSize(fr[2]):null;
    function m(x,isd){var name=dec(x.href.replace(/\/$/,'').split('?')[0]);return {name:name,href:x.href,path:path+x.href.split('?')[0],size:x.sz||0,ts:x.ts,tags:x.tags||{},count:isd&&x.tags&&x.tags['.files']!=null?x.tags['.files']:null}}
    return {path:path,dirs:(j.dirs||[]).map(function(x){return m(x,1)}),files:(j.files||[]).filter(function(x){return !/\.PARTIAL(\?|$)/.test(x.href)}).map(function(x){return m(x,0)}),free:free,total:total,perms:j.perms||[],acct:j.acct}})},
- perms:function(){var p=last.perms||[];return {read:p.indexOf('read')>=0,write:p.indexOf('write')>=0,move:p.indexOf('move')>=0,del:p.indexOf('delete')>=0}},
+ perms:function(){var p=last.perms||[];return {read:p.indexOf('read')>=0,write:p.indexOf('write')>=0,move:p.indexOf('move')>=0,del:p.indexOf('delete')>=0,dot:p.indexOf('dot')>=0}},
  canShare:function(){return !!A.user&&!!(last.cfg&&last.cfg.shr_who)&&last.cfg.shr_who!='no'},
  url:function(x){return x.path},
  mdUrl:function(x){return x.path+'?v'},
@@ -77,10 +79,10 @@ window.NagiCpp=A;
 // v3m: remember folder listings for a short time, and let the garden prefetch on touch
 (function(){var C={},TTL=45000;
   var raw=A.ls;
-  A.ls=function(path){var e=C[path];if(e&&e.d&&Date.now()-e.t<TTL)return Promise.resolve(e.d);if(e&&e.p)return e.p;
-    var p=raw(path).then(function(d){C[path]={t:Date.now(),d:d};return d},function(err){if(C[path]&&C[path].p)delete C[path];throw err});
-    C[path]={t:0,p:p};return p};
-  A.prefetch=function(path){if(!path||(C[path]&&C[path].d&&Date.now()-C[path].t<TTL))return;A.ls(path)};
+  A.ls=function(path){var k=path+'\0'+(A.dots&&A.dots()?'1':'0'),e=C[k];if(e&&e.d&&Date.now()-e.t<TTL)return Promise.resolve(e.d);if(e&&e.p)return e.p;
+    var p=raw(path).then(function(d){C[k]={t:Date.now(),d:d};return d},function(err){if(C[k]&&C[k].p)delete C[k];throw err});
+    C[k]={t:0,p:p};return p};
+  A.prefetch=function(path){if(!path)return;var k=path+'\0'+(A.dots&&A.dots()?'1':'0');if(C[k]&&C[k].d&&Date.now()-C[k].t<TTL)return;A.ls(path)};
   A.invalidate=function(path){if(!path){C={};return}Object.keys(C).forEach(function(k){if(k===path||k.indexOf(path)===0||path.indexOf(k)===0)delete C[k]})};
 })();
 (function(){var mk=A.mkdir,rn=A.rename,dl=A.del;

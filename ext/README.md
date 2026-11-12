@@ -76,5 +76,6 @@ Needs a `llama` binary with `serve --embeddings` (the [Llama app](https://llama.
 ## Limits
 
 - Images and video are searchable by **name** only (no captions) in this version.
+- Dotfiles and dotfolders (names starting with a period) are never indexed, and never appear in Smart or Default search.
 - The first Smart query may take a few seconds while the helper loads; after that it stays warm for ten minutes.
 - Default filename search needs the `e2d` + `no-hash` flags above; without them Nagi’s Default engine will say search is not available.
