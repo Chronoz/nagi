@@ -243,6 +243,10 @@ html.fz #nagi svg.g .cell:not(.free):hover .f{filter:drop-shadow(0 6px 10px rgba
 #nagi .lbx .nav{position:absolute;top:50%;transform:translateY(-50%)}
 #nagi .lbx .nav.p{left:22px}#nagi .lbx .nav.n{right:22px}
 #nagi .lbx .x{position:absolute;top:16px;right:18px}
+#nagi .lbx .im{touch-action:none;overflow:hidden}
+#nagi .lbx img.drag,#nagi .lbx img.snap,#nagi .lbx img.norise{animation:none}
+#nagi .lbx img.drag{transition:none}
+#nagi .lbx img.snap{transition:transform .32s cubic-bezier(.2,.8,.2,1)}
 @keyframes nfade{from{opacity:0}}
 @keyframes nrise{from{opacity:0;transform:translateY(8px)}}
 /* toast */

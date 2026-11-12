@@ -101,7 +101,7 @@ function build(){
   document.addEventListener('click',function(e){if($.mm.classList.contains('on')&&!e.target.closest('.mm,.bb .more')){$.mm.classList.remove('on');$.mo.setAttribute('aria-expanded','false')}if(!e.target.closest('.fm')){[].forEach.call(root.querySelectorAll('.fmm.on'),function(m){m.classList.remove('on');var b=m.parentNode&&m.parentNode.querySelector('button');if(b)b.setAttribute('aria-expanded','false')})}});
   $.np.addEventListener('click',function(e){if(e.target.closest('.dl')){if(st.q[st.qi])download([st.q[st.qi]]);return}var b=e.target.closest('[data-p]');if(!b)return;({prev:prev,next:next,toggle:toggle})[b.dataset.p]()});
   $.np.querySelector('.bar').addEventListener('pointerdown',function(e){var r=this.getBoundingClientRect();if(au.duration)au.currentTime=au.duration*Math.min(1,Math.max(0,(e.clientX-r.left)/r.width));tick()});
-  $.lbx.querySelector('.p').onclick=function(){lbStep(-1)};$.lbx.querySelector('.n').onclick=function(){lbStep(1)};$.lbx.querySelector('.x').onclick=lbClose;
+  $.lbx.querySelector('.p').onclick=function(){lbStep(-1)};$.lbx.querySelector('.n').onclick=function(){lbStep(1)};$.lbx.querySelector('.x').onclick=lbClose;lbSwipe();
   $.lbx.querySelector('.im').onclick=function(e){if(e.target.tagName!='IMG')lbClose()};
   stageEvents();keys();drops();
   setInterval(pollUps,400);
@@ -592,7 +592,21 @@ function stageEvents(){var clickT;
     var x=c.item.x;if(x.isDir&&!(e.metaKey||e.ctrlKey||e.shiftKey)){clearTimeout(clickT);return go(x.path)}
     clearTimeout(clickT);var multi=e.metaKey||e.ctrlKey||e.shiftKey;clickT=setTimeout(function(){toggleSel(x.path,false)},multi?0:190)});
   $.stage.addEventListener('dblclick',function(e){clearTimeout(clickT);var g=e.target.closest&&e.target.closest('.cell');var c=g&&st.cells[g.dataset.i];if(c&&c.item.x&&!c.item.x.isDir)open(c.item.x)})}
-function showRest(){setView('list');if(innerWidth<=760){var c=$.ctx;c.style.transition='';c.style.transform='';c.style.willChange='';c.classList.remove('drag','peek');if(!c.classList.contains('open')){c.classList.add('open');pushOv('drawer')}requestAnimationFrame(function(){if($.chk)$.chk.scrollTop=0})}}
+function openDrawer(){var c=$.ctx;if(innerWidth>760||!c)return;c.style.transition='';c.style.transform='';c.style.willChange='';c.classList.remove('drag','peek');if(!c.classList.contains('open')){c.classList.add('open');pushOv('drawer')}}
+/* v3y: +N opens the existing drawer / checklist, and leaves the garden as it is.
+   It must not switch to list view. On a phone this is the same open as the
+   handle (the .32s snap). On a wider screen the panel is already there: show
+   every row inside it and let that list scroll, without a jump. */
+function showRest(){
+  if(innerWidth<=760){openDrawer();requestAnimationFrame(function(){if($.chk)$.chk.scrollTop=0});return}
+  var chk=$.chk;if(!chk)return;
+  var h=chk.clientHeight;
+  [].forEach.call(chk.querySelectorAll('.row[data-p],.grp'),function(r){r.style.display=''});
+  var rest=chk.querySelector('.row.more.rest');if(rest)rest.remove();
+  if($.ctx)$.ctx.classList.remove('tight','tighter');
+  if(h){chk.style.maxHeight=h+'px';chk.style.overflowY='auto'}
+  chk.scrollTop=0;
+}
 function setView(v){st.view=v;localStorage.nagi_view=v;render(true)}
 function bindThumbs(rootEl,opt){if(!rootEl)return;
   if(rootEl._thIO){try{rootEl._thIO.disconnect()}catch(e){}rootEl._thIO=null}
@@ -622,7 +636,7 @@ function renderList(){if(window.NagiKoi)NagiKoi.hide();$.svg.style.display='none
 function open(x){if(x.isDir)return go(x.path);
   var same=st.data.items.filter(function(y){return y.type==x.type});
   if(x.type=='audio')return playList(same,same.indexOf(x));
-  if(x.type=='image')return lbOpen(same,same.indexOf(x));
+  if(x.type=='image'){var imgs=lbSet(x),ix=imgs.findIndex(function(y){return y.path==x.path});return lbOpen(imgs,ix<0?0:ix)}
   if(x.type=='video')return openSheet('video',x);
   if(x.type=='doc'||x.type=='code')return openSheet('read',x);
   download([x])}
@@ -649,7 +663,8 @@ function lbOpen(list,i){st.lb={list:list,i:i||0};$.lbx.classList.add('on');lbSho
    never the full files. Download is a quiet "Download" for the original. */
 function lbShow(){var x=st.lb.list[st.lb.i],gen=(lbShow.g=(lbShow.g||0)+1),prev=A.thumb?A.thumb(x,'preview'):null,src=prev||A.url(x);
   st.lb.gen=gen;
-  $.lbx.querySelector('.im').innerHTML='<img alt="'+esc(x.name)+'" decoding="async" src="'+esc(src)+'">';
+  var noRise=!!st.lb.noRise;st.lb.noRise=0;
+  $.lbx.querySelector('.im').innerHTML='<img alt="'+esc(x.name)+'" decoding="async" src="'+esc(src)+'"'+(noRise?' class="norise"':'')+'>';
   $.lbx.querySelector('.cap').innerHTML='<span><b>'+esc(x.name)+'</b><button class="ib sm dl" type="button" aria-label="Download full size" title="Download full size (⇧S)">'+ic('download')+'<span>Download</span></button>'+fs(x.size)+' · '+esc(rel(x.ts))+'</span><span>'+(st.lb.i+1)+' of '+st.lb.list.length+'</span>';
   $.lbx.querySelector('.cap .dl').onclick=function(){download([x])};
   var im=$.lbx.querySelector('.im img');
@@ -662,6 +677,65 @@ function lbPreload(list,i){if(!A.thumb)return;[i-1,i+1].forEach(function(n){var 
 function lbStep(d){if(!st.lb)return;var n=st.lb.i+d;if(n<0||n>=st.lb.list.length)return;st.lb.i=n;lbShow()}
 function lbClose(fromPop){$.lbx.classList.remove('on');st.lb=null;if(!fromPop)popOv()}
 function closeLb(fromPop){if(st.lb)lbClose(fromPop)}
+function lbSet(x){
+  /* v3y: swipe (and arrows) walk the current image selection when one exists
+     and the opened file is in it; otherwise every image in the folder. */
+  var all=st.data?st.data.items.filter(function(y){return y.type=='image'}):[];
+  var sel=(st.sel||[]).map(find).filter(function(y){return y&&y.type=='image'});
+  if(sel.length&&(!x||sel.some(function(y){return y.path==x.path})))return sel;
+  return all;
+}
+/* v3y: one-finger left/right swipe on the preview, following the finger,
+   then a calm snap (same easing as the drawer). Two-finger touches are
+   ignored so the pinch-zoom block is left alone. Neighbour previews only;
+   the original is never fetched. Desktop keeps the arrow keys. */
+function lbSwipe(){
+  var s=null,eat=false,W=function(){return ($.lbx&&$.lbx.clientWidth)||innerWidth};
+  function img(){return $.lbx.querySelector('.im img')}
+  function reset(el){if(!el)return;el.style.transition='';el.style.transform='';el.classList.remove('drag','snap')}
+  function onDown(e){
+    if(!st.lb||!$.lbx.classList.contains('on'))return;
+    if(e.pointerType==='mouse'||(e.button!=null&&e.button>0)||e.isPrimary===false)return;
+    if(e.target.closest&&e.target.closest('.nav,.x,.cap,button,.dl'))return;
+    var el=img();if(!el)return;
+    s={x:e.clientX,y:e.clientY,t:Date.now(),el:el,moved:false,dx:0,pid:e.pointerId};
+    try{$.lbx.setPointerCapture(e.pointerId)}catch(_){}
+  }
+  function onMove(e){
+    if(!s||s.pid!==e.pointerId)return;
+    var dx=e.clientX-s.x,dy=e.clientY-s.y;
+    if(!s.moved){if(Math.abs(dx)<8&&Math.abs(dy)<8)return;if(Math.abs(dy)>Math.abs(dx)){s=null;return}s.moved=true;s.el.classList.add('drag');s.el.style.animation='none';s.el.style.transition='none'}
+    if(e.cancelable)try{e.preventDefault()}catch(_){}
+    var atEnd=(dx>0&&st.lb.i===0)||(dx<0&&st.lb.i===st.lb.list.length-1);
+    s.dx=atEnd?dx*.28:dx;
+    s.el.style.transform='translate3d('+s.dx+'px,0,0)';
+  }
+  function onEnd(e){
+    if(!s||(e&&s.pid!==e.pointerId))return;
+    var D=s;s=null;var el=D.el,dx=D.dx,dt=Math.max(1,Date.now()-D.t),v=dx/dt;
+    if(!D.moved){reset(el);return}
+    eat=true;setTimeout(function(){eat=false},350);
+    var dir=(Math.abs(dx)>56||Math.abs(v)>.35)?(dx<0?1:-1):0;
+    var can=dir&&st.lb&&st.lb.i+dir>=0&&st.lb.i+dir<st.lb.list.length;
+    function snap(to,done){
+      if(RM){if(done)done();reset(el);return}
+      el.classList.remove('drag');el.classList.add('snap');
+      el.style.animation='none';
+      el.style.transition='transform .32s cubic-bezier(.2,.8,.2,1)';
+      el.style.transform='translate3d('+to+'px,0,0)';
+      setTimeout(function(){if(done)done();reset(el)},330);
+    }
+    if(can)snap((dir>0?-1:1)*W(),function(){if(st.lb){st.lb.noRise=1;lbStep(dir)}});
+    else snap(0);
+  }
+  $.lbx.addEventListener('pointerdown',onDown);
+  $.lbx.addEventListener('pointermove',onMove);
+  $.lbx.addEventListener('pointerup',onEnd);
+  $.lbx.addEventListener('pointercancel',function(e){if(!s||s.pid!==e.pointerId)return;var el=s.el;s=null;reset(el)});
+  $.lbx.addEventListener('touchstart',function(e){if(e.touches&&e.touches.length>1){if(s){reset(s.el);s=null}}},{passive:true});
+  $.lbx.addEventListener('touchmove',function(e){if(s&&s.moved&&e.cancelable)e.preventDefault()},{passive:false});
+  $.lbx.addEventListener('click',function(e){if(eat){e.preventDefault();e.stopPropagation()}},true);
+}
 
 /* ---------- sheets ---------- */
 function pinWin(){if($.win)$.win.scrollTop=0;if($.bd)$.bd.scrollTop=0}
