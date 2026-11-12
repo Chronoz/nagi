@@ -157,6 +157,6 @@ Full list in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## License
 
-[MIT](LICENSE) © 2026 Tri Nguyen, for Nagi's own code (see the koi note below).
+[MIT](LICENSE) for Nagi's own code (see the koi note below).
 
 **Note on the koi pond:** `src/koi.js` (and the koi part of the built `theme/nagi.js`) is adapted from Mia-lab's koi pond, linked above. The original was published without a licence notice, so the MIT licence does **not** cover those adapted portions, and their original author keeps all rights to them. copyparty isn't included here, only linked. Fonts and icons keep their own licences.
