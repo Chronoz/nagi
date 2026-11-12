@@ -32,8 +32,14 @@
   // lower. Nagi owns the whole screen, so keep the document pinned at 0,0 and size the app to the real viewport.
   var R=document.documentElement;function app(){return R.classList.contains('nagi')&&!R.classList.contains('nagi-classic')}
   function typing(){var a=document.activeElement;return a&&(a.tagName=='INPUT'||a.tagName=='TEXTAREA'||a.isContentEditable)}
-  function fit(){if(!app())return;R.style.setProperty('--nagi-h',window.innerHeight+'px');
-    if(!typing()&&(window.scrollY||window.scrollX||(document.body&&document.body.scrollTop)||R.scrollTop)){window.scrollTo(0,0);if(document.body)document.body.scrollTop=0;R.scrollTop=0}}
+  /* v3r: never write a keyboard-shrunk innerHeight into --nagi-h. On a
+     home-screen iOS app the first focus shrinks innerHeight to about half the
+     screen; that used to collapse #nagi (and hide the bottom bar) under the
+     already-misplaced first-open search sheet. typing() used to skip only the
+     scroll reset. On blur, the delayed fit() below restores full height. */
+  function fit(){if(!app())return;if(typing())return;R.style.setProperty('--nagi-h',window.innerHeight+'px');
+    if(window.scrollY||window.scrollX||(document.body&&document.body.scrollTop)||R.scrollTop){window.scrollTo(0,0);if(document.body)document.body.scrollTop=0;R.scrollTop=0}
+    var w=document.querySelector('#nagi .win');if(w&&w.scrollTop)w.scrollTop=0}
   ['resize','orientationchange','pageshow','load','scroll'].forEach(function(t){addEventListener(t,fit,{passive:true})});
   if(window.visualViewport){visualViewport.addEventListener('resize',fit);visualViewport.addEventListener('scroll',fit)}
   document.addEventListener('focusout',function(){setTimeout(fit,60);setTimeout(fit,400)});

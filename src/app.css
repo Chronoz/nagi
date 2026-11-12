@@ -9,7 +9,7 @@ html.fz #nagi{--w-bg:#0F1D1E;--w-bg2:#162A2A;--w-line:#22393A;--w-veil:rgba(10,2
 #nagi *{box-sizing:border-box}
 #nagi button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer;height:auto;border-radius:0;box-shadow:none}
 #nagi .ni{display:inline-block;width:1.15em;height:1.15em;flex:none;vertical-align:-.2em;background:currentColor;-webkit-mask:var(--ni) center/contain no-repeat;mask:var(--ni) center/contain no-repeat}
-#nagi .win{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden}
+#nagi .win{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;overflow:clip}
 /* top line: wordmark left, text menus right */
 #nagi .tb{height:58px;flex:none;display:flex;justify-content:space-between;align-items:center;padding:0 40px 0 44px;user-select:none}
 #nagi .ttl{font:600 14px var(--n-ui);color:var(--n-ink);letter-spacing:-.005em;display:flex;align-items:baseline;gap:7px}
@@ -161,7 +161,8 @@ html.fz #nagi svg.g .cell:not(.free):hover .f{filter:drop-shadow(0 6px 10px rgba
 #nagi .veil{position:absolute;inset:0;background:var(--w-veil);opacity:0;pointer-events:none;transition:opacity .35s;z-index:8;backdrop-filter:blur(2px)}
 #nagi .veil.on{opacity:1;pointer-events:auto}
 #nagi .sheet{position:absolute;top:12px;right:12px;bottom:12px;width:min(440px,calc(100% - 24px));z-index:9;background:var(--w-bg);border-radius:16px;box-shadow:0 0 0 1px var(--w-line),0 30px 70px -30px rgba(10,24,26,.6);display:flex;flex-direction:column;transform:translateX(calc(100% + 40px));transition:transform .45s var(--n-ease);overflow:hidden}
-#nagi .sheet.on{transform:none}
+/* v3r: explicit identity so the first open interpolates from translateY/X, not from an uncommitted none */
+#nagi .sheet.on{transform:translate3d(0,0,0)}
 #nagi .sheet.wide{width:min(860px,calc(100% - 24px))}
 #nagi .sh-h{display:flex;align-items:center;justify-content:space-between;padding:22px 22px 6px 28px}
 #nagi .sh-h h3{font:400 26px var(--n-serif);margin:0;letter-spacing:-.01em}
@@ -606,7 +607,7 @@ html.fz #nagi svg.g .cell:not(.free):hover .f{filter:drop-shadow(0 6px 10px rgba
    On mobile the visible box stays 16px; a ::before expands the tap target
    to 28×36 without growing the bordered square (which used to sit 1px from the icon). */
 #nagi .row .ty{width:28px;height:28px}
-#nagi .sr{content-visibility:auto;contain-intrinsic-size:auto 52px}
+
 @media (max-width:760px){
  #nagi .row{grid-template-columns:28px 28px 1fr auto;column-gap:10px}
  #nagi .chk .cb{min-width:0;min-height:0;width:16px;height:16px;position:relative;justify-self:center}

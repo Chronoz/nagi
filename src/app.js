@@ -70,7 +70,7 @@ function build(){
      '<div class="dz"><div>'+ic('cloud-upload')+'<h4>Drop to upload</h4><p></p></div></div>'+
     '</div><div class="toast"></div></div><nav class="bb" aria-label="Actions"></nav></div>');
   document.body.appendChild(root);
-  ['win','fa','ctx','crumb','num','say','para','meter','chh','chk','acts','acts2','np','stage','lbs','tip','legend','veil','sheet','lbx','dz','toast','menu'].forEach(function(k){$[k]=root.querySelector('.'+k)});
+  ['win','bd','fa','ctx','crumb','num','say','para','meter','chh','chk','acts','acts2','np','stage','lbs','tip','legend','veil','sheet','lbx','dz','toast','menu'].forEach(function(k){$[k]=root.querySelector('.'+k)});
   $.tbn=root.querySelector('.tbn');$.mm=root.querySelector('.mm');$.msel=root.querySelector('.msel');$.mo=root.querySelector('.mo');$.bb=root.querySelector('.bb');root.appendChild($.mm);$.tbt=root.querySelector('.tbt');$.tav=root.querySelector('.tav');$.tav.onclick=function(){if(A.user)openSheet('settings');else signIn()};root.querySelector('.tbk').onclick=function(){up()};$.svg=root.querySelector('svg.g');$.zoom=root.querySelector('.zoom');$.gh=$.legend;$.cnt=root.querySelector('.cnt');
   root.querySelector('.srv').textContent='';
   addEventListener('resize',debounce(function(){render(false)},160));
@@ -509,15 +509,23 @@ function lbClose(){$.lbx.classList.remove('on');st.lb=null}
 function closeLb(){if(st.lb)lbClose()}
 
 /* ---------- sheets ---------- */
+function pinWin(){if($.win)$.win.scrollTop=0;if($.bd)$.bd.scrollTop=0}
+function focusQuiet(el){if(!el)return;try{el.focus({preventScroll:true})}catch(e){el.focus()}pinWin()}
 function openSheet(kind,arg){st.sheet=kind;var s=$.sheet;s.className='sheet'+(kind=='video'||kind=='read'?' wide':'');var f=SHEETS[kind];if(!f)return;
   s.innerHTML='';f(s,arg);var x=s.querySelector('.sh-x');if(x)x.onclick=closeSheet;
   [].forEach.call($.menu.querySelectorAll('[data-m]'),function(b){b.classList.toggle('on',b.dataset.m==kind)});
+  /* v3r: commit the closed transform after the first fill so the open transition
+     starts from translateY(105%) (mobile), not an unpainted identity. Native
+     autofocus (and a mid-transition focus()) would scroll .win — overflow:hidden
+     is still programmatically scrollable — and leave the sheet sitting in the
+     top half of the screen. That is why only the first Search tap went blank. */
+  void s.offsetWidth;pinWin();
   requestAnimationFrame(function(){s.classList.add('on');$.veil.classList.add('on')});
-  var inp=s.querySelector('input[autofocus]');if(inp)setTimeout(function(){inp.focus()},120)}
+  var inp=s.querySelector('input[data-autofocus]');if(inp)setTimeout(function(){focusQuiet(inp)},200)}
 function signIn(){location.href=A.loginUrl()}
 function signOut(){location.href=A.logoutUrl()}
 function closeSheet(){if(!st.sheet)return;st.sheet=null;$.sheet.classList.remove('on');$.veil.classList.remove('on');[].forEach.call($.menu.querySelectorAll('[data-m]'),function(b){b.classList.remove('on')});
-  var v=$.sheet.querySelector('video');if(v)v.pause();setTimeout(function(){if(!st.sheet)$.sheet.innerHTML=''},450)}
+  var v=$.sheet.querySelector('video');if(v)v.pause();pinWin();setTimeout(function(){if(!st.sheet){$.sheet.innerHTML='';pinWin()}},450)}
 function dlb(k){return '<button class="ib sm dl" aria-label="Download" title="Download'+(k?' (⇧S)':'')+'">'+ic('download')+'</button>'}
 function head(t,p,dl){return '<div class="sh-h"><div><div class="sh-t"><h3>'+t+'</h3>'+(dl?dlb(1):'')+'</div>'+(p?'<p>'+p+'</p>':'')+'</div><button class="ib sh-x" aria-label="Close" title="Close (Esc)">'+ic('x')+'</button></div>'}
 function topo(w,h){var poly=G.roundRect(4,4,w-8,h-8,18),r=G.contours(poly,18,11,[w*.78,h*.3],40);return '<svg class="topo" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none">'+r.map(function(d){return '<path d="'+d+'" fill="none" stroke="currentColor" stroke-opacity=".28" stroke-width=".8"/>'}).join('')+'</svg>'}
@@ -531,7 +539,7 @@ var SHEETS={
   s.querySelector('[data-u=f]').onclick=function(){A.pickFiles()};s.querySelector('[data-u=d]').onclick=function(){A.pickFolder()};
   var dz=s.querySelector('.drop');dz.style.color='var(--n-ink)';
   renderOpts(s.querySelector('.opts'));pollUps(true)},
- search:function(s){s.innerHTML=head('Search',(A.engine&&A.engine()=='smart')?'Describe it, or type a name. Smart search looks inside files you can open.':'Names, artists, albums and titles, across every folder you can open.')+'<div class="sh-b"><label class="field">'+ic('search')+'<input type="search" autofocus placeholder="Try “evening” or “kyoto”" aria-label="Search"></label><div class="res" style="margin-top:14px"></div></div>';
+ search:function(s){s.innerHTML=head('Search',(A.engine&&A.engine()=='smart')?'Describe it, or type a name. Smart search looks inside files you can open.':'Names, artists, albums and titles, across every folder you can open.')+'<div class="sh-b"><label class="field">'+ic('search')+'<input type="search" data-autofocus placeholder="Try “evening” or “kyoto”" aria-label="Search"></label><div class="res" style="margin-top:14px"></div></div>';
   var inp=s.querySelector('input'),res=s.querySelector('.res'),n=0;
   function paint(q,hits,note){
     if(!hits.length){
@@ -642,11 +650,12 @@ function updRings(){st.cells.forEach(function(c,i){if(!c.item.up)return;var u=st
 
 /* ---------- small dialogs ---------- */
 function ask(t,body,okL,danger,input){return new Promise(function(res){var s=$.sheet;st.sheet='ask';s.className='sheet ask';
-  s.innerHTML=head(t,body)+'<div class="sh-b">'+(input!=null?'<label class="field"><input type="text" autofocus value="'+esc(input)+'" aria-label="'+esc(t)+'"></label>':'')+'<div class="acts" style="margin-top:18px"><button class="btn fill ok"'+(danger?' style="background:var(--n-car);border-color:var(--n-car)"':'')+'>'+esc(okL)+'</button><button class="btn quiet no">Cancel</button></div></div>';
+  s.innerHTML=head(t,body)+'<div class="sh-b">'+(input!=null?'<label class="field"><input type="text" data-autofocus value="'+esc(input)+'" aria-label="'+esc(t)+'"></label>':'')+'<div class="acts" style="margin-top:18px"><button class="btn fill ok"'+(danger?' style="background:var(--n-car);border-color:var(--n-car)"':'')+'>'+esc(okL)+'</button><button class="btn quiet no">Cancel</button></div></div>';
   var i=s.querySelector('input');function done(v){closeSheet();res(v)}
   s.querySelector('.ok').onclick=function(){done(i?i.value:true)};s.querySelector('.no').onclick=s.querySelector('.sh-x').onclick=function(){done(null)};
-  if(i)i.onkeydown=function(e){if(e.key=='Enter')done(i.value)};else setTimeout(function(){var o=s.querySelector('.ok');if(o)o.focus()},150);
-  requestAnimationFrame(function(){s.classList.add('on');$.veil.classList.add('on');if(i){i.focus();i.select()}})})}
+  if(i)i.onkeydown=function(e){if(e.key=='Enter')done(i.value)};else setTimeout(function(){var o=s.querySelector('.ok');if(o)focusQuiet(o)},200);
+  void s.offsetWidth;pinWin();
+  requestAnimationFrame(function(){s.classList.add('on');$.veil.classList.add('on');if(i)setTimeout(function(){focusQuiet(i);i.select()},200)})})}
 function newFolder(){ask('New folder','It will be created inside '+esc(title(st.path))+'.','Create',false,'').then(function(n){if(!n)return;A.mkdir(st.path,n).then(function(){toast(ic('check')+' Folder created');reload()},function(e){toast(ic('circle-alert')+' '+esc(e.message||e),4000)})})}
 function rename(x){ask('Rename','Give “'+esc(x.name)+'” a new name.','Rename',false,x.name).then(function(n){if(!n||n==x.name)return;A.rename(x,n).then(function(){st.sel=[];toast(ic('check')+' Renamed');reload()},function(e){toast(ic('circle-alert')+' '+esc(e.message||e),4000)})})}
 function del(sel){ask('Delete '+(sel.length==1?'“'+esc(sel[0].name)+'”':sel.length+' items')+'?','This removes them from the server for good. There is no bin.','Delete',true).then(function(ok){if(!ok)return;A.del(sel).then(function(){st.sel=[];toast(ic('check')+' Deleted');reload()},function(e){toast(ic('circle-alert')+' '+esc(e.message||e),4000)})})}
