@@ -332,7 +332,8 @@ function refresh(){
     r.setAttribute('aria-selected',on?'true':'false')});
   renderActs(sel);paintSel();
 }
-function download(sel){if(sel.length==1&&!sel[0].isDir){var a=document.createElement('a');a.href=A.url(sel[0]);a.download=sel[0].name;document.body.appendChild(a);a.click();a.remove();return}
+function dlUrl(x){var u=A.url(x);if(!u||u==='#'||/^(data:|blob:)/.test(u)||/[?&]dl(=|&|$)/.test(u))return u;return u+(u.indexOf('?')>=0?'&':'?')+'dl'}
+function download(sel){if(sel.length==1&&!sel[0].isDir){var a=document.createElement('a');a.href=dlUrl(sel[0]);a.download=sel[0].name;document.body.appendChild(a);a.click();a.remove();return}
   if(sel.length==1)return A.zip(sel[0].path,null);A.zip(st.path,sel.map(function(x){return x.name}))}
 
 /* ---------- garden ---------- */
@@ -558,17 +559,24 @@ function tick(){var d=au.duration||0,t=au.currentTime||0,f=d?t/d:0;$.np.querySel
   $.np.querySelector('.a').textContent=dur(t);$.np.querySelector('.z').textContent=dur(d);$.np.classList.toggle('paused',au.paused);
   var b=$.np.querySelector('[data-p=toggle]');b.innerHTML=ic(au.paused?'play':'pause');root.classList.toggle('playing',!au.paused)}
 function lbOpen(list,i){st.lb={list:list,i:i||0};$.lbx.classList.add('on');lbShow()}
-function lbShow(){var x=st.lb.list[st.lb.i],gen=(lbShow.g=(lbShow.g||0)+1),prev=A.thumb?A.thumb(x,'preview'):null,full=A.url(x);
+/* v3w: the viewer shows ONLY a light preview (?th=wf3, uncropped, 960×768
+   bound with the default --th-size). v3p stacked a cropped ?th=w3 under a
+   second img that then fetched the original and faded it in — two pictures,
+   and a heavy download. The original is fetched only if the file cannot be
+   thumbnailed (svg, or a thumb error). Prev/next preload neighbour previews,
+   never the full files. Download is a quiet "Download" for the original. */
+function lbShow(){var x=st.lb.list[st.lb.i],gen=(lbShow.g=(lbShow.g||0)+1),prev=A.thumb?A.thumb(x,'preview'):null,src=prev||A.url(x);
   st.lb.gen=gen;
-  $.lbx.querySelector('.im').innerHTML=(prev?'<img class="prev" alt="" decoding="async" src="'+esc(prev)+'">':'')+'<img class="full'+(prev?'':' on')+'" alt="'+esc(x.name)+'" decoding="async"'+(prev?'':' src="'+esc(full)+'"')+'>';
-  $.lbx.querySelector('.cap').innerHTML='<span><b>'+esc(x.name)+'</b>'+dlb(1)+fs(x.size)+' · '+esc(rel(x.ts))+'</span><span>'+(st.lb.i+1)+' of '+st.lb.list.length+'</span>';
+  $.lbx.querySelector('.im').innerHTML='<img alt="'+esc(x.name)+'" decoding="async" src="'+esc(src)+'">';
+  $.lbx.querySelector('.cap').innerHTML='<span><b>'+esc(x.name)+'</b><button class="ib sm dl" type="button" aria-label="Download full size" title="Download full size (⇧S)">'+ic('download')+'<span>Download</span></button>'+fs(x.size)+' · '+esc(rel(x.ts))+'</span><span>'+(st.lb.i+1)+' of '+st.lb.list.length+'</span>';
   $.lbx.querySelector('.cap .dl').onclick=function(){download([x])};
-  var cap=$.lbx.querySelector('.cap span'),pr=$.lbx.querySelector('img.prev'),fu=$.lbx.querySelector('img.full');
-  function dim(im){if(!im||!im.naturalWidth||im.classList.contains('prev'))return;if(cap.querySelector('.dims'))cap.querySelector('.dims').remove();var s=document.createElement('span');s.className='dims';s.textContent=' · '+im.naturalWidth+' × '+im.naturalHeight;cap.appendChild(s)}
-  function loadFull(){if(!st.lb||st.lb.gen!==gen)return;if(fu.getAttribute('src'))return;fu.onload=function(){if(!st.lb||st.lb.gen!==gen)return;fu.classList.add('on');dim(fu)};fu.onerror=function(){};fu.src=full}
-  if(pr){pr.onload=function(){dim(pr);loadFull()};pr.onerror=function(){if(/[?&]th=w/.test(pr.src)){pr.onerror=null;pr.src=pr.src.replace('th=w','th=j')}else loadFull()};if(pr.complete&&pr.naturalWidth)pr.onload()}
-  else if(fu)fu.onload=function(){dim(fu)};
+  var im=$.lbx.querySelector('.im img');
+  im.onerror=function(){if(!st.lb||st.lb.gen!==gen)return;var s=im.getAttribute('src')||'';
+    if(/[?&]th=w/.test(s)){im.src=s.replace('th=w','th=j');return}
+    if(prev&&s!==A.url(x)){im.src=A.url(x)}};
+  lbPreload(st.lb.list,st.lb.i);
   $.lbx.querySelector('.p').style.visibility=st.lb.i>0?'':'hidden';$.lbx.querySelector('.n').style.visibility=st.lb.i<st.lb.list.length-1?'':'hidden'}
+function lbPreload(list,i){if(!A.thumb)return;[i-1,i+1].forEach(function(n){var x=list[n],u=x&&A.thumb(x,'preview');if(!u)return;var im=new Image();im.decoding='async';im.src=u})}
 function lbStep(d){if(!st.lb)return;var n=st.lb.i+d;if(n<0||n>=st.lb.list.length)return;st.lb.i=n;lbShow()}
 function lbClose(){$.lbx.classList.remove('on');st.lb=null}
 function closeLb(){if(st.lb)lbClose()}

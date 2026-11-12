@@ -57,7 +57,7 @@ var A={rootName:'Everything',user:'tri',
  dots:function(){return /(?:^|;\s*)dots=y(?:;|$)/.test(document.cookie)},
  setDots:function(v){document.cookie=v?'dots=y;path=/;SameSite=Lax;max-age=31536000':'dots=;path=/;SameSite=Lax;max-age=0'},
  url:function(x){if(/\.(flac|mp3|wav)$/i.test(x.name))return tone(x);if(/\.(jpe?g|png)$/i.test(x.name))return img(NagiGarden.hash(x.path),1600,1100);return '#'},
- thumb:function(x){return /\.(jpe?g|png)$/i.test(x.name)?img(NagiGarden.hash(x.path),320,240):null},
+ thumb:function(x,kind){if(!/\.(jpe?g|png)$/i.test(x.name))return null;return img(NagiGarden.hash(x.path),kind==='preview'?960:320,kind==='preview'?720:240)},
  text:function(x){return Promise.resolve(noteOf(x))},
  isDataless:function(){return Promise.resolve(false)},
  readme:function(files){var rd=null,i,L=files||[];for(i=0;i<L.length;i++)if(!L[i].isDir&&/^README\.md$/i.test(L[i].name)){rd=L[i];break}

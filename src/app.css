@@ -415,7 +415,9 @@ html.fz #nagi svg.g .cell:not(.free):hover .f{filter:drop-shadow(0 6px 10px rgba
 #nagi .sh-t{display:flex;align-items:center;gap:8px;min-width:0}
 #nagi .sh-t h3{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #nagi .lbx .cap span{display:flex;align-items:center;gap:0}
-#nagi .lbx .cap .dl{margin:0 8px 0 -4px;color:var(--n-mute)}
+#nagi .lbx .cap .dl{display:inline-flex;align-items:center;gap:5px;width:auto;height:28px;padding:0 9px 0 6px;margin:0 10px 0 2px;color:var(--n-mute);font:500 12.5px var(--n-ui);border-radius:8px}
+#nagi .lbx .cap .dl:hover{color:var(--n-ink);background:var(--w-bg2)}
+#nagi .lbx .cap .dl .ni{width:15px;height:15px}
 #nagi .np .dl{color:var(--n-mute)}
 
 /* v3g mobile redesign: no big action buttons; overflow menu; collapsible list */
@@ -589,12 +591,8 @@ html.fz #nagi svg.g .cell:not(.free):hover .f{filter:drop-shadow(0 6px 10px rgba
 #nagi .sr .ic.ths{width:36px;height:36px;border-radius:9px;background:var(--w-bg2);color:var(--n-mute)}
 #nagi .sr{grid-template-columns:36px 1fr auto}
 #nagi .lst td.nm .ty.ths{width:28px;height:28px}
-#nagi .lbx .im img.prev,#nagi .lbx .im img.full{position:absolute;inset:0;margin:auto;max-width:100%;max-height:100%;border-radius:4px;box-shadow:0 30px 60px -30px rgba(10,24,26,.6)}
-#nagi .lbx .im img.prev{opacity:1}
-#nagi .lbx .im img.full{opacity:0;transition:opacity .25s ease}
-#nagi .lbx .im img.full.on{opacity:1}
 @media (prefers-reduced-motion:reduce){
- #nagi .ty.ths img,#nagi .sr .ic.ths img,#nagi .lbx .im img.full{transition:none}
+ #nagi .ty.ths img,#nagi .sr .ic.ths img{transition:none}
  #nagi svg.g image.th{transition:none}
 }
 

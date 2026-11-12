@@ -16,7 +16,7 @@ Nagi is a skin for copyparty, a portable file server in one Python file. It only
 - **Koi pond = free space**: the disk's free space is a pond with koi swimming in it. It drops to 30 fps when you're idle and pauses when it's off screen
 - **Raked sand at the root**: the biggest stone at the top level gets sand rings around it
 - **Checklist + list view**: grouped by type (folders, video, audio, images, docs, code, archives), with folder icons. Press `G` to switch between garden and list
-- **Players**: a music player with a queue (artist/title come from tags), plus video, image lightbox and text/markdown viewers. Each has a small download button next to the title. If you can write, you can Edit and Save `.md` and `.txt` notes right in the reader. Version history goes to the volume hist folder (`--md-hist v`), not next to the file
+- **Players**: a music player with a queue (artist/title come from tags), plus video, image lightbox and text/markdown viewers. The image viewer shows a light preview only (`?th=wf3`, never the original) and a quiet Download for the full file. Each viewer has a small download button next to the title. If you can write, you can Edit and Save `.md` and `.txt` notes right in the reader. Version history goes to the volume hist folder (`--md-hist v`), not next to the file
 - **Folder notes**: a folder with a `README.md` shows a short, sanitized note at the top of the listing; tap Show more to expand. Online-only (dataless) files are skipped and never opened
 - **Undo upload**: signed-in users with write access get a quiet “Undo upload” item under More. It lists your own recent uploads, including unfinished ones, and asks before deleting (Enter confirms, Esc cancels). Guests do not see it
 - **Duplicates**: signed-in users get a quiet “Duplicates” item under More. It lists groups of files with the same contents (size and path), read-only — remove an extra copy yourself from the usual menu. Guests do not see it. The server needs a content-hash index (`-e2dsa`, and no `--no-hash`). Nagi never enables `--dedup`, which would replace copies with links.
@@ -73,10 +73,10 @@ copyparty -p 3979 -i 127.0.0.1 \
   -v /path/to/your/files:/:r:rwmda,alice \
   -v ./nagi/theme:/.nagi:r \
   --themes 12 --theme 11 --u2j 4 --md-hist v --rw-edit md,txt \
-  --css-browser '/.nagi/nagi.css?nagi=e71fb6dd4d&cache=31536000' \
-  --js-browser  '/.nagi/nagi-late.js?nagi=407ad1bf27&cache=31536000' \
+  --css-browser '/.nagi/nagi.css?nagi=64bde67bce&cache=31536000' \
+  --js-browser  '/.nagi/nagi-late.js?nagi=69abc23cd0&cache=31536000' \
   --js-other    '/.nagi/nagi-pages.js?nagi=eab13f8d41&cache=31536000' \
-  --html-head-s '<link rel="stylesheet" href="/.nagi/nagi-pages.css?nagi=5c996510eb&cache=31536000"><link rel="manifest" href="/.nagi/manifest.json?nagi=b8ef2fba1e&cache=31536000"><link rel="apple-touch-icon" href="/.nagi/icon-180.png?nagi=88d99dbc9b&cache=31536000"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Nagi"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><script nonce="{{ js_nonce }}">(function(){var c="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",m=document.querySelector("meta[name=viewport]");if(m)m.setAttribute("content",c);else{m=document.createElement("meta");m.setAttribute("name","viewport");m.setAttribute("content",c);(document.head||document.documentElement).appendChild(m)}})();</script><script nonce="{{ js_nonce }}" src="/.nagi/nagi-early.js?nagi=b3e2c53135&cache=31536000"></script><script nonce="{{ js_nonce }}" src="/.nagi/nagi.js?nagi=6bc9a24fa7&cache=31536000"></script>' \
+  --html-head-s '<link rel="stylesheet" href="/.nagi/nagi-pages.css?nagi=5c996510eb&cache=31536000"><link rel="manifest" href="/.nagi/manifest.json?nagi=b8ef2fba1e&cache=31536000"><link rel="apple-touch-icon" href="/.nagi/icon-180.png?nagi=88d99dbc9b&cache=31536000"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Nagi"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><script nonce="{{ js_nonce }}">(function(){var c="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",m=document.querySelector("meta[name=viewport]");if(m)m.setAttribute("content",c);else{m=document.createElement("meta");m.setAttribute("name","viewport");m.setAttribute("content",c);(document.head||document.documentElement).appendChild(m)}})();</script><script nonce="{{ js_nonce }}" src="/.nagi/nagi-early.js?nagi=b3e2c53135&cache=31536000"></script><script nonce="{{ js_nonce }}" src="/.nagi/nagi.js?nagi=c240a4b7fc&cache=31536000"></script>' \
   --favico "凪 17282B EEE5D1" --no-robots
 ```
 
@@ -113,8 +113,8 @@ Prefer a config file? See [`examples/copyparty.conf`](examples/copyparty.conf), 
   u2j: 4
   md-hist: v
   rw-edit: md,txt
-  css-browser: /.nagi/nagi.css?nagi=e71fb6dd4d&cache=31536000
-  js-browser: /.nagi/nagi-late.js?nagi=407ad1bf27&cache=31536000
+  css-browser: /.nagi/nagi.css?nagi=64bde67bce&cache=31536000
+  js-browser: /.nagi/nagi-late.js?nagi=69abc23cd0&cache=31536000
   js-other: /.nagi/nagi-pages.js?nagi=eab13f8d41&cache=31536000
   html-head-s: <link rel="stylesheet" href="/.nagi/nagi-pages.css?nagi=5c996510eb&cache=31536000"> …
 
@@ -153,7 +153,7 @@ Install and flags: [`ext/README.md`](ext/README.md). The `--on404` volflag uses 
 - `-e2dsa` builds copyparty's file index (search, dedup, faster listings). Skip it on huge or cloud-synced folders (Dropbox, iCloud…), because it reads every file once.
 - `-e2ts` reads media tags so the music player shows artist & title.
 - Keep the theme mount read-only (`:r`). The theme folder is served to everyone, so don't put secrets or scripts in it.
-- **Thumbnails:** copyparty already knows how (`?th=w` / `?th=j`, and `?th=w3` for a larger preview). Keep `--hist` outside any cloud-synced folder. Do not use `--th-pregen` on a Dropbox volume — that would walk every file and could hydrate online-only placeholders. For ffmpeg builds without libwebp, set `th-ff-jpg`. Pillow in the same venv as copyparty makes still-image thumbs faster; ffmpeg covers video. A small hook (`ext/nagi-thumbs.py`) skips dataless / online-only files so they are never opened just to make a thumb. Guests only get thumbs for files they can read; dotfiles stay hidden (and `nodotsrch` keeps them out of search).
+- **Thumbnails:** copyparty already knows how (`?th=w` / `?th=j` for list thumbs, `?th=wf3` / `?th=jf3` for the image viewer — uncropped, 3× `--th-size`, 960×768 with the default). Keep `--hist` outside any cloud-synced folder. Do not use `--th-pregen` on a Dropbox volume — that would walk every file and could hydrate online-only placeholders. For ffmpeg builds without libwebp, set `th-ff-jpg`. Pillow in the same venv as copyparty makes still-image thumbs faster; ffmpeg covers video. A small hook (`ext/nagi-thumbs.py`) skips dataless / online-only files so they are never opened just to make a thumb. Guests only get thumbs for files they can read; dotfiles stay hidden (and `nodotsrch` keeps them out of search).
 - After a theme update, just reload the page (the `?nagi=` hash is a new URL, so the old cache is skipped). If you added it to the iPhone home screen, swipe the app away and open it again.
 - Classic copyparty UI: **Settings → Classic copyparty**. Switch back from the 凪 button.
 

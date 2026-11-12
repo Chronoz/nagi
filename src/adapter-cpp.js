@@ -175,7 +175,8 @@ whenBody(boot);
 var THUMBED=/\.(jpe?g|png|gif|webp|tif|tiff|bmp|heic|heif|avif|mp4|m4v|mov|webm|mkv|avi)$/i;
 var TC={},fmt=null;
 A.thumb=function(x,kind){if(!th||!x||x.isDir||!THUMBED.test(x.name||x.path||''))return null;
-  var f=fmt||'w',q=kind==='preview'?(f==='j'?'j3':'w3'):f;return x.path+'?th='+q};
+  /* preview is uncropped 3× (default --th-size 320x256 → 960×768 fit). w3 is centre-cropped, which framed the photo differently from the original and made the v3p double-show worse. */
+  var f=fmt||'w',q=kind==='preview'?(f==='j'?'jf3':'wf3'):f;return x.path+'?th='+q};
 function get(u){return fetch(u,{credentials:'same-origin'}).then(function(r){var ct=r.headers.get('content-type')||'';if(!r.ok||!/^image\//.test(ct)||/svg/.test(ct))return null;return r.blob()},function(){return null})}
 A.thumbOk=function(url){if(TC[url])return TC[url];var u=fmt=='j'?url.replace(/th=w/g,'th=j'):url;
   return TC[url]=get(u).then(function(b){if(b){if(!fmt)fmt=/th=j/.test(u)?'j':'w';return URL.createObjectURL(b)}
