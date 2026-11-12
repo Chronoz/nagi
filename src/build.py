@@ -180,9 +180,15 @@ def write_run_local(hashes: dict):
     def inject_early(text):
         if 'nagi-early.js' not in hashes:
             return text
+        # v3v: mutate copyparty's viewport in place (it sits just above {{ html_head }}).
+        # Double-quoted JS only — html-head-s is wrapped in single quotes in run-local.sh.
+        vp = ('<script nonce="{{ js_nonce }}">(function(){var c="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",m=document.querySelector("meta[name=viewport]");if(m)m.setAttribute("content",c);else{m=document.createElement("meta");m.setAttribute("name","viewport");m.setAttribute("content",c);(document.head||document.documentElement).appendChild(m)}})();</script>')
         early = '<script nonce="{{ js_nonce }}" src="' + verb('nagi-early.js') + '"></script>'
         nagi = '<script nonce="{{ js_nonce }}" src="' + verb('nagi.js') + '"></script>'
-        tag = early + nagi
+        tag = vp + early + nagi
+        text = re.sub(
+            r'<script nonce="\{\{ js_nonce \}\}">\(function\(\)\{var c="width=device-width[^<]*</script>',
+            '', text)
         if 'nagi-early.js' in text:
             text = re.sub(
                 r'<script nonce="\{\{ js_nonce \}\}" src="/\.nagi/nagi-early\.js[^"]*"></script>'
@@ -284,16 +290,16 @@ def build():
     # mockup (keep readable-enough; minify css/js to keep the file smaller)
     fonts = fcss.replace('/.nagi/fonts/', '../theme/fonts/')
     css = minify_css(fonts + icss + pages_base + r(S/'app.css') + r(S/'pwa.css'))
-    js = minify_js(r(S/'garden.js') + '\n' + r(S/'koi.js') + '\n' + r(S/'app.js') + '\n' + r(S/'adapter-mock.js'))
+    js = minify_js(pwa_js + '\n' + r(S/'garden.js') + '\n' + r(S/'koi.js') + '\n' + r(S/'app.js') + '\n' + r(S/'adapter-mock.js'))
     D.mkdir(exist_ok=True)
     (D/'index.html').write_text(
         '<!doctype html><html lang="en" id="ht_brw" class="fy f y nagi mock"><head><meta charset="utf-8">'
-        '<meta name="viewport" content="width=device-width,initial-scale=1"><title>Nagi 凪 · demo</title>'
+        '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"><title>Nagi 凪 · demo</title>'
         '<link rel="icon" href="data:image/svg+xml,'+'%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Ccircle cx=%2232%22 cy=%2232%22 r=%2230%22 fill=%22%2317282B%22/%3E%3Ctext x=%2232%22 y=%2243%22 font-size=%2232%22 text-anchor=%22middle%22 fill=%22%23EEE5D1%22%3E%E5%87%AA%3C/text%3E%3C/svg%3E">'
         '<style>'+css+'\nhtml,body{margin:0;height:100%;overflow:hidden;background:var(--n-paper)}</style></head><body>'
         '<script>'+js+'\nNagiApp.start(NagiMock);</script></body></html>')
     lg = r(S/'login-mock.html')
-    (D/'login.html').write_text(lg.replace('/*CSS*/', minify_css(fonts + icss + pages_base)).replace('/*JS*/', minify_js(r(S/'garden.js')+'\n'+r(S/'pages.js'))))
+    (D/'login.html').write_text(lg.replace('/*CSS*/', minify_css(fonts + icss + pages_base + '\n' + pwa_css)).replace('/*JS*/', minify_js(pwa_js+'\n'+r(S/'garden.js')+'\n'+r(S/'pages.js'))))
 
     sizes = {p.name: p.stat().st_size for p in list(O.glob('nagi*')) + list((O/'fonts').glob('*.woff2'))}
     print('built', sizes, 'icons', len(names), 'hashes', hashes)

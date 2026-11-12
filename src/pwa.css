@@ -1,6 +1,10 @@
 /* v3g: app feel on phones: no pull-to-refresh / rubber-band, no double-tap zoom, no callouts on chrome */
-html,body{overscroll-behavior:none;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%;text-size-adjust:100%}
-html.nagi #nagi{touch-action:manipulation;overscroll-behavior:none}
+/* v3v: touch-action:manipulation on the document and every scroll surface kills
+   pinch and double-tap zoom (pan / swipe still work). Do not set this on
+   .drawer-h / .ctx>.num — those use touch-action:none for 1:1 drawer drag. */
+html,body{overscroll-behavior:none;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:manipulation}
+html.nagi #nagi,html.nagi #nagi .win,html.nagi #nagi .lst,html.nagi #nagi .chk,html.nagi #nagi .sheet,html.nagi #nagi .sh-b,html.nagi #nagi .res,html.nagi #nagi .uq,html.nagi #nagi .lbx,html.nagi #nagi .txt,html.nagi #nagi .gd{touch-action:manipulation}
+html.nagi #nagi{overscroll-behavior:none}
 html.nagi #nagi .lst,html.nagi #nagi .chk,html.nagi #nagi .ctx,html.nagi #nagi .sheet,html.nagi #nagi .sh-b,html.nagi #nagi .res,html.nagi #nagi .uq{overscroll-behavior:contain}
 html.nagi #nagi button,html.nagi #nagi .tb,html.nagi #nagi .row,html.nagi #nagi svg.g,html.nagi #nagi .lbs,html.nagi #nagi .legend,html.nagi #nagi .crumb,html.nagi #nagi .num,html.nagi #nagi .chh,html.nagi #nagi .np,html.nagi #nagi .mm,html.nagi #nagi .lbx img,html.nagi #nagi .lst tr{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 html.nagi #nagi{height:100vh;height:100dvh;height:var(--nagi-h,100dvh);bottom:auto}

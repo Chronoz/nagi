@@ -156,6 +156,7 @@ html.nagi-embed #mp{margin-top:14px!important;box-shadow:none!important;padding:
 @media (max-width:760px){
 html:not(#ht_brw) input[type=text],html:not(#ht_brw) input[type=password],html:not(#ht_brw) input:not([type]){font-size:16px!important;height:52px!important}
 html:not(#ht_brw) input[type=submit],html:not(#ht_brw) button{font-size:16px!important;height:52px}
+html#ht_md #mtw textarea,html#ht_md #mt,html#ht_mde textarea,html#ht_mde #mt{font-size:16px!important}
 html#ht_spl body,html#ht_msg body{padding-top:env(safe-area-inset-top)!important;padding-bottom:calc(24px + env(safe-area-inset-bottom))!important;padding-left:env(safe-area-inset-left)!important;padding-right:env(safe-area-inset-right)!important}
 html#ht_spl .nagi-card input[type=submit]{scroll-margin-bottom:24px}
 }

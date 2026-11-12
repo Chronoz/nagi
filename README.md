@@ -24,7 +24,7 @@ Nagi is a skin for copyparty, a portable file server in one Python file. It only
 - **Upload**: drag and drop anywhere or use the upload sheet. A quiet "3 files uploaded" note shows instead of a big toast. Uses copyparty's up2k, so uploads resume and dedup
 - **Safe bulk actions**: "Download all" asks first. Delete, rename, move, new folder and share links work the copyparty way
 - **Paper and dusk themes** (light / dark) and a calmer copyparty login page
-- **iPhone / PWA**: add it to your home screen and it opens like an app. Bottom tab bar with big tap targets, account menu in More, safe-area aware, no pull-to-refresh or zoom on inputs
+- **iPhone / PWA**: add it to your home screen and it opens like an app. Bottom tab bar with big tap targets, account menu in More, safe-area aware, no pull-to-refresh, no pinch or double-tap zoom, no zoom on inputs
 - **Accessible**: keyboard shortcuts, focus traps in dialogs, `prefers-reduced-motion` respected
 - **Smart search**: in Settings, pick **Smart (EmbeddingGemma 2)** or copyparty’s **Default** filename index. The search drawer looks the same either way. If the Smart sidecar is down, it falls back to Default on its own. The extension is one Python file; see [`ext/`](ext/README.md)
 - **Hidden files**: logged-in users with permission can turn on **Show hidden files** in Settings (dotfiles and folders starting with a period). Guests never see the setting, and the server will not list those names to them. They are not indexed.
@@ -73,10 +73,10 @@ copyparty -p 3979 -i 127.0.0.1 \
   -v /path/to/your/files:/:r:rwmda,alice \
   -v ./nagi/theme:/.nagi:r \
   --themes 12 --theme 11 --u2j 4 --md-hist v --rw-edit md,txt \
-  --css-browser '/.nagi/nagi.css?nagi=2133627ae0&cache=31536000' \
-  --js-browser  '/.nagi/nagi-late.js?nagi=b0b2854f27&cache=31536000' \
-  --js-other    '/.nagi/nagi-pages.js?nagi=94536693d1&cache=31536000' \
-  --html-head-s '<link rel="stylesheet" href="/.nagi/nagi-pages.css?nagi=feede5270a&cache=31536000"><link rel="manifest" href="/.nagi/manifest.json?nagi=b8ef2fba1e&cache=31536000"><link rel="apple-touch-icon" href="/.nagi/icon-180.png?nagi=88d99dbc9b&cache=31536000"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Nagi"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><script nonce="{{ js_nonce }}" src="/.nagi/nagi-early.js?nagi=8d2ff78d8d&cache=31536000"></script><script nonce="{{ js_nonce }}" src="/.nagi/nagi.js?nagi=3b39cb2c77&cache=31536000"></script>' \
+  --css-browser '/.nagi/nagi.css?nagi=e71fb6dd4d&cache=31536000' \
+  --js-browser  '/.nagi/nagi-late.js?nagi=407ad1bf27&cache=31536000' \
+  --js-other    '/.nagi/nagi-pages.js?nagi=eab13f8d41&cache=31536000' \
+  --html-head-s '<link rel="stylesheet" href="/.nagi/nagi-pages.css?nagi=5c996510eb&cache=31536000"><link rel="manifest" href="/.nagi/manifest.json?nagi=b8ef2fba1e&cache=31536000"><link rel="apple-touch-icon" href="/.nagi/icon-180.png?nagi=88d99dbc9b&cache=31536000"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Nagi"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><script nonce="{{ js_nonce }}">(function(){var c="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",m=document.querySelector("meta[name=viewport]");if(m)m.setAttribute("content",c);else{m=document.createElement("meta");m.setAttribute("name","viewport");m.setAttribute("content",c);(document.head||document.documentElement).appendChild(m)}})();</script><script nonce="{{ js_nonce }}" src="/.nagi/nagi-early.js?nagi=b3e2c53135&cache=31536000"></script><script nonce="{{ js_nonce }}" src="/.nagi/nagi.js?nagi=6bc9a24fa7&cache=31536000"></script>' \
   --favico "凪 17282B EEE5D1" --no-robots
 ```
 
@@ -113,10 +113,10 @@ Prefer a config file? See [`examples/copyparty.conf`](examples/copyparty.conf), 
   u2j: 4
   md-hist: v
   rw-edit: md,txt
-  css-browser: /.nagi/nagi.css?nagi=2133627ae0&cache=31536000
-  js-browser: /.nagi/nagi-late.js?nagi=b0b2854f27&cache=31536000
-  js-other: /.nagi/nagi-pages.js?nagi=94536693d1&cache=31536000
-  html-head-s: <link rel="stylesheet" href="/.nagi/nagi-pages.css?nagi=feede5270a&cache=31536000"><link rel="manifest" href="/.nagi/manifest.json?nagi=b8ef2fba1e&cache=31536000"> …
+  css-browser: /.nagi/nagi.css?nagi=e71fb6dd4d&cache=31536000
+  js-browser: /.nagi/nagi-late.js?nagi=407ad1bf27&cache=31536000
+  js-other: /.nagi/nagi-pages.js?nagi=eab13f8d41&cache=31536000
+  html-head-s: <link rel="stylesheet" href="/.nagi/nagi-pages.css?nagi=5c996510eb&cache=31536000"> …
 
 [/.nagi]
   /path/to/nagi/theme

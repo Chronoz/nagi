@@ -26,3 +26,4 @@ html.nagi #toast.err{background:var(--n-card)!important;color:var(--n-car)!impor
 html.nagi #toast #toastt{display:none!important}
 html.nagi #tt{background:var(--n-ink)!important;color:var(--n-paper)!important;border:0!important;border-radius:10px!important;font:400 12px/1.5 var(--n-ui)!important;box-shadow:var(--n-shadow-s)!important;text-shadow:none!important}
 html.nagi:not(.nagi-classic) #tt{display:none!important}
+@media (max-width:760px){html.nagi #modalc input,html.nagi #modalc textarea{font-size:16px!important}}

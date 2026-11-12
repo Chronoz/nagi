@@ -1,3 +1,13 @@
+/* v3v: lock the (single) viewport meta on every Nagi page, including login.
+   Runs from <head> via --html-head-s, immediately after copyparty's own
+   viewport tag, and updates that tag in place so we never have two. The
+   same content is kept by pwa.js; this just wins the race before first paint. */
+(function(){
+  var C='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover';
+  var m=document.querySelector('meta[name="viewport"]');
+  if(!m){m=document.createElement('meta');m.setAttribute('name','viewport');(document.head||document.documentElement).appendChild(m)}
+  if(m.getAttribute('content')!==C)m.setAttribute('content',C);
+})();
 /* v3s: runs from <head> on the file browser only (html#ht_brw). Starts nagi.js
    async so the garden can boot without waiting for DOMContentLoaded (which waits
    for copyparty's blocking browser.js / baguettebox / up2k). Best-effort: if the

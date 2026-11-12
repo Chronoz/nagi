@@ -9,12 +9,16 @@
   tag('meta','name','apple-mobile-web-app-status-bar-style',{content:'black-translucent'});
   // copyparty ships initial-scale=0.8: on a phone that renders Nagi at 80 % (468 css px on an iPhone X), which made
   // every icon and tap target 20 % smaller than designed. Nagi is laid out for the real width; classic keeps copyparty's.
-  var vp=H.querySelector('meta[name="viewport"]');if(!vp)vp=tag('meta','name','viewport',{content:'width=device-width, initial-scale=1'});
-  var vp0=vp.content,NV='width=device-width, initial-scale=1, viewport-fit=cover';
-  // v3j: iOS keeps the 0.8 zoom it started with when the tag changes after load; a short maximum-scale=1
-  // snaps the zoom back to 1 (and is lifted again, so pinch-zoom still works)
-  var snapT=0;function syncVp(){var c=document.documentElement.classList.contains('nagi-classic')?vp0+(/viewport-fit/.test(vp0)?'':', viewport-fit=cover'):NV;
-    if(vp.content===c||vp.content===c+', maximum-scale=1')return;if(c===NV){vp.content=NV+', maximum-scale=1';clearTimeout(snapT);snapT=setTimeout(function(){vp.content=NV},600)}else vp.content=c}
+  var vp=H.querySelector('meta[name="viewport"]');if(!vp)vp=tag('meta','name','viewport',{content:'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover'});
+  /* v3v: lock pinch / double-tap zoom. copyparty ships initial-scale=0.8 (and on the
+     browser page, minimum-scale=0.6). We overwrite that single existing tag — never
+     add a second viewport meta, which iOS merges unpredictably. maximum-scale=1 also
+     snaps iOS off the 0.8 it may have already applied. v3j used to lift the lock
+     after 600ms so pinch still worked; that is the opposite of what we want now.
+     iOS Safari ignores user-scalable=no on its own (iOS 10+), so gesture and
+     multi-touch preventDefault below are the real pinch block. */
+  var NV='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover';
+  function syncVp(){if(vp.content!==NV)vp.content=NV}
   // theme-color follows the Nagi light (paper / yūgure) so the status bar matches the page
   var tc=tag('meta','name','theme-color',{content:'#F1EADB'});
   function sync(){syncVp();var dark=/\bfz\b/.test(document.documentElement.className);tc.setAttribute('content',dark?'#0F1D1E':'#F1EADB')}
@@ -54,6 +58,14 @@
   document.addEventListener('touchstart',function(){},{passive:true});
   if(!standalone&&'ontouchstart' in window){var E=14,UI='button,a,input,select,textarea,label,summary,[role],.cell,.row,.bb,.mm,.sheet,.lbx,.np,.ctx,.tb';
     document.addEventListener('touchstart',function(e){if(e.touches.length!==1)return;var t=e.touches[0],el=e.target;if(t.clientX>=E&&t.clientX<=innerWidth-E)return;if(el&&el.closest&&el.closest(UI))return;e.preventDefault()},{passive:false})}
+  /* v3v: iOS Safari (and the home-screen web app) still pinch-zooms despite
+     user-scalable=no. Kill Safari's gesture events and any multi-finger
+     touchmove. Single-finger touchmove is left alone so list / sheet scroll,
+     the drawer swipe, reader text selection, and the edge-swipe guard above
+     keep working. Capture + non-passive so preventDefault actually sticks. */
+  function noZoom(e){e.preventDefault()}
+  ;['gesturestart','gesturechange','gestureend'].forEach(function(n){document.addEventListener(n,noZoom,{passive:false,capture:true})});
+  document.addEventListener('touchmove',function(e){if(e.touches&&e.touches.length>1)e.preventDefault()},{passive:false,capture:true});
 
   /* v3s: Newsreader / italic / Plex are not on the first garden screen — load them
      on demand (sheets, login, idle) so first paint does not wait on 190 KB+ of serif. */
