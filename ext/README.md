@@ -79,3 +79,15 @@ Needs a `llama` binary with `serve --embeddings` (the [Llama app](https://llama.
 - Dotfiles and dotfolders (names starting with a period) are never indexed, and never appear in Smart or Default search.
 - The first Smart query may take a few seconds while the helper loads; after that it stays warm for ten minutes.
 - Default filename search needs the `e2d` + `no-hash` flags above; without them Nagi’s Default engine will say search is not available.
+
+## Thumbnails and online-only files
+
+copyparty generates thumbs into `--hist` (keep that folder **outside** Dropbox). Nagi shows them in the garden, the list, and both search views, and opens a larger thumb (`?th=w3`) in the image viewer before the original.
+
+A 4-byte open of a macOS dataless (online-only) file would hydrate the whole thing. [`nagi-thumbs.py`](nagi-thumbs.py) wraps `ThumbCli.get` with the same `is_dataless` check as Smart search, and returns no thumb (copyparty then serves a small icon). Load it at process start, never from `site-packages`:
+
+```sh
+python3 ext/nagi-thumbs.py install-pth /path/to/copyparty/.venv
+```
+
+Do not set `--th-pregen` on a cloud-synced volume.

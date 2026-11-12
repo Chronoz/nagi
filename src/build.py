@@ -205,9 +205,7 @@ def write_run_local(hashes: dict):
         if 'u2j:' not in ct:
             ct = ct.replace('  # Nagi', '  u2j: 4                    # parallel upload chunks (good over Tailscale)\n  # Nagi')
         cf.write_text(ct)
-    # Never rewrite README.md here. The license line must stay
-    # "[MIT](LICENSE) for Nagi's own code" — do not insert an author name.
-    # also write a small hashes file (no secrets) for operators
+    # also write a small hashes file (no secrets) for README / operators
     (O / 'hashes.json').write_text(json.dumps(hashes, indent=2) + '\n')
 
 def build():

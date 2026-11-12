@@ -261,7 +261,7 @@ html.fz #nagi svg.g .cell:not(.free):hover .f{filter:drop-shadow(0 6px 10px rgba
  #nagi .mb{display:grid}
  #nagi .gd{position:absolute;left:0;right:0;top:0;bottom:var(--dh,178px);inset:0 0 var(--dh,178px) 0;padding:2px 12px 10px}
  #nagi .legend{display:none}
- #nagi .ctx{position:absolute;left:0;right:0;top:auto;width:auto;max-height:none;bottom:0;height:var(--dh,178px);background:var(--w-bg);border-radius:20px 20px 0 0;box-shadow:0 -1px 0 var(--w-line),0 -20px 40px -24px rgba(10,24,26,.3);padding:6px 20px 16px;z-index:7;transition:height .4s var(--n-ease)}
+ #nagi .ctx{position:absolute;left:0;right:0;top:auto;width:auto;max-height:none;bottom:0;height:var(--dh,178px);background:var(--w-bg);border-radius:20px 20px 0 0;box-shadow:0 -1px 0 var(--w-line),0 -20px 40px -24px rgba(10,24,26,.3);padding:6px 20px 16px;z-index:7;transition:transform .32s cubic-bezier(.2,.8,.2,1)}
  #nagi .ctx.open{height:80%}
  #nagi .drawer-h{display:block;width:38px;height:5px;border-radius:5px;background:var(--w-line);margin:2px auto 10px;cursor:grab;flex:none}
  #nagi .num{margin:6px 0 2px}#nagi .num .big{font-size:50px}#nagi .num small{font-size:15px}#nagi .num .note{font-size:12px;margin-left:12px}
@@ -478,8 +478,8 @@ html.fz #nagi svg.g .cell:not(.free):hover .f{filter:drop-shadow(0 6px 10px rgba
  #nagi .tbk:active{background:var(--w-bg2)}
  #nagi.sub .tbt{display:block;font:400 21px var(--n-serif);color:var(--n-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;letter-spacing:-.01em}
  #nagi .gd{inset:0 0 calc(var(--dh) + var(--bbh)) 0}
- #nagi .ctx{bottom:var(--bbh);height:var(--dh);border-radius:20px 20px 0 0;padding-bottom:4px}
- #nagi .ctx.open{height:calc(100% - var(--bbh) - 24px)}
+ #nagi .ctx{bottom:var(--bbh);height:calc(100% - var(--bbh) - 24px);border-radius:20px 20px 0 0;padding-bottom:4px;transform:translate3d(0,calc(100% - var(--dh)),0);transition:transform .32s cubic-bezier(.2,.8,.2,1);overflow:hidden;backface-visibility:hidden}
+ #nagi .ctx.open{height:calc(100% - var(--bbh) - 24px);transform:none}
  #nagi .bb{display:flex;position:absolute;left:0;right:0;bottom:0;z-index:12;height:var(--bbh);padding:0 max(6px,env(safe-area-inset-right)) var(--bbp) max(6px,env(safe-area-inset-left));background:var(--w-bg);border-top:0;box-shadow:0 -.5px 0 var(--w-line);align-items:flex-start;box-sizing:border-box}
  #nagi .bb .bt{flex:1;min-width:48px;height:53px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--n-ink2);font:500 10.5px var(--n-ui);letter-spacing:.02em;position:relative;border-radius:12px;-webkit-tap-highlight-color:transparent}
  #nagi .bb .bt .ni{width:24px;height:24px}
@@ -525,16 +525,22 @@ html.fz #nagi svg.g .cell:not(.free):hover .f{filter:drop-shadow(0 6px 10px rgba
  #nagi .tbk:active,#nagi .mm button:active{background:var(--w-bg2)}
 }
 
-/* v3k: swipeable drawer */
+/* v3k/v3p: swipeable drawer — transform only, 1:1 with the finger */
 @media (max-width:760px){
  #nagi .drawer-h{position:relative;touch-action:none}
  #nagi .drawer-h::after{content:"";position:absolute;left:-40px;right:-40px;top:-10px;bottom:-8px}
  #nagi .ctx>.num{touch-action:none}
  #nagi .ctx>.crumb{touch-action:pan-x}
- #nagi .ctx.drag{transition:none!important}
+ #nagi .ctx.drag{transition:none!important;will-change:transform}
  #nagi .ctx.drag .drawer-h{background:var(--n-mute)}
+ #nagi .ctx.peek .chk,#nagi .ctx.drag.peek .chk{display:block;max-height:none;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0}
+ #nagi .ctx.peek .chh{display:grid}
+ #nagi .chk .cb{min-width:28px;min-height:36px;display:grid;place-items:center}
 }
-@media (max-width:760px){#nagi .ctx.open .chk{overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0}}
+@media (max-width:760px){#nagi .ctx.open .chk,#nagi .ctx.peek .chk{overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0}}
+@media (prefers-reduced-motion:reduce){
+ #nagi .ctx{transition:none!important}
+}
 
 /* v3l: unplayable video notice */
 #nagi .vno{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:34px 18px 30px;border:1px solid var(--w-line);border-radius:14px;background:var(--w-bg2);color:var(--n-ink2)}
@@ -568,4 +574,29 @@ html.fz #nagi svg.g .cell:not(.free):hover .f{filter:drop-shadow(0 6px 10px rgba
 }
 @media (prefers-reduced-motion:reduce){
  #nagi .num .nva,#nagi .num .nvb,#nagi .num .note .na,#nagi .num .note .nb{transition:none}
+}
+
+/* v3p: lazy thumbs, reserved size so rows do not jump */
+#nagi .ty.ths,#nagi .sr .ic.ths{position:relative;overflow:hidden;background:var(--w-bg2)}
+#nagi .ty.ths{width:28px;height:28px;border-radius:7px;flex:none}
+#nagi .ty.ths .ni{position:absolute;inset:0;margin:auto;width:14px;height:14px;opacity:.45}
+#nagi .ty.ths img,#nagi .sr .ic.ths img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .2s ease}
+#nagi .ty.ths.on .ni,#nagi .sr .ic.ths.on .ni{opacity:0}
+#nagi .ty.ths.on img,#nagi .sr .ic.ths.on img{opacity:1}
+#nagi .sr .ic.ths{width:36px;height:36px;border-radius:9px;background:var(--w-bg2);color:var(--n-mute)}
+#nagi .sr{grid-template-columns:36px 1fr auto}
+#nagi .lst td.nm .ty.ths{width:28px;height:28px}
+#nagi .lbx .im img.prev,#nagi .lbx .im img.full{position:absolute;inset:0;margin:auto;max-width:100%;max-height:100%;border-radius:4px;box-shadow:0 30px 60px -30px rgba(10,24,26,.6)}
+#nagi .lbx .im img.prev{opacity:1}
+#nagi .lbx .im img.full{opacity:0;transition:opacity .25s ease}
+#nagi .lbx .im img.full.on{opacity:1}
+@media (prefers-reduced-motion:reduce){
+ #nagi .ty.ths img,#nagi .sr .ic.ths img,#nagi .lbx .im img.full{transition:none}
+ #nagi svg.g image.th{transition:none}
+}
+
+@media (max-width:760px){
+ /* the 4th (Changed) column was clipped on a 375px phone; Kind+Size are enough here */
+ #nagi .lst th:nth-child(4),#nagi .lst td:nth-child(4){display:none}
+ #nagi .lst td.nm{max-width:52vw}
 }

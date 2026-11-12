@@ -147,6 +147,7 @@ Install and flags: [`ext/README.md`](ext/README.md). The `--on404` volflag uses 
 - `-e2dsa` builds copyparty's file index (search, dedup, faster listings). Skip it on huge or cloud-synced folders (Dropbox, iCloud…), because it reads every file once.
 - `-e2ts` reads media tags so the music player shows artist & title.
 - Keep the theme mount read-only (`:r`). The theme folder is served to everyone, so don't put secrets or scripts in it.
+- **Thumbnails:** copyparty already knows how (`?th=w` / `?th=j`, and `?th=w3` for a larger preview). Keep `--hist` outside any cloud-synced folder. Do not use `--th-pregen` on a Dropbox volume — that would walk every file and could hydrate online-only placeholders. For ffmpeg builds without libwebp, set `th-ff-jpg`. Pillow in the same venv as copyparty makes still-image thumbs faster; ffmpeg covers video. A small hook (`ext/nagi-thumbs.py`) skips dataless / online-only files so they are never opened just to make a thumb. Guests only get thumbs for files they can read; dotfiles stay hidden (and `nodotsrch` keeps them out of search).
 - After a theme update, just reload the page (the `?nagi=` hash is a new URL, so the old cache is skipped). If you added it to the iPhone home screen, swipe the app away and open it again.
 - Classic copyparty UI: **Settings → Classic copyparty**. Switch back from the 凪 button.
 
