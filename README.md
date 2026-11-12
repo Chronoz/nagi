@@ -22,6 +22,7 @@ Nagi is a skin for copyparty, a portable file server in one Python file. It only
 - **Paper and dusk themes** (light / dark) and a calmer copyparty login page
 - **iPhone / PWA**: add it to your home screen and it opens like an app. Bottom tab bar with big tap targets, account menu in More, safe-area aware, no pull-to-refresh or zoom on inputs
 - **Accessible**: keyboard shortcuts, focus traps in dialogs, `prefers-reduced-motion` respected
+- **Smart search**: in Settings, pick **Smart (EmbeddingGemma 2)** or copyparty’s **Default** filename index. The search drawer looks the same either way. If the Smart sidecar is down, it falls back to Default on its own. The extension is one Python file; see [`ext/`](ext/README.md)
 
 | | |
 |---|---|
@@ -67,10 +68,10 @@ copyparty -p 3979 -i 127.0.0.1 \
   -v /path/to/your/files:/:r:rwmda,alice \
   -v ./nagi/theme:/.nagi:r \
   --themes 12 --theme 11 --u2j 4 \
-  --css-browser '/.nagi/nagi.css?nagi=98ea3aec7f&cache=31536000' \
-  --js-browser  '/.nagi/nagi.js?nagi=093ce4876c&cache=31536000' \
-  --js-other    '/.nagi/nagi-pages.js?nagi=a5332f4e96&cache=31536000' \
-  --html-head-s '<link rel="stylesheet" href="/.nagi/nagi-pages.css?nagi=aea58f83eb&cache=31536000"><link rel="manifest" href="/.nagi/manifest.json?nagi=b8ef2fba1e&cache=31536000"><link rel="apple-touch-icon" href="/.nagi/icon-180.png?nagi=88d99dbc9b&cache=31536000"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Nagi"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">' \
+  --css-browser '/.nagi/nagi.css?nagi=5c15f771b5&cache=31536000' \
+  --js-browser  '/.nagi/nagi.js?nagi=ed23f390b2&cache=31536000' \
+  --js-other    '/.nagi/nagi-pages.js?nagi=e8ea5630fb&cache=31536000' \
+  --html-head-s '<link rel="stylesheet" href="/.nagi/nagi-pages.css?nagi=0c6fcba267&cache=31536000"><link rel="manifest" href="/.nagi/manifest.json?nagi=b8ef2fba1e&cache=31536000"><link rel="apple-touch-icon" href="/.nagi/icon-180.png?nagi=88d99dbc9b&cache=31536000"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Nagi"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">' \
   --favico "凪 17282B EEE5D1" --no-robots
 ```
 
@@ -105,10 +106,10 @@ Prefer a config file? See [`examples/copyparty.conf`](examples/copyparty.conf), 
   themes: 12
   theme: 11
   u2j: 4
-  css-browser: /.nagi/nagi.css?nagi=98ea3aec7f&cache=31536000
-  js-browser: /.nagi/nagi.js?nagi=093ce4876c&cache=31536000
-  js-other: /.nagi/nagi-pages.js?nagi=a5332f4e96&cache=31536000
-  html-head-s: <link rel="stylesheet" href="/.nagi/nagi-pages.css?nagi=aea58f83eb&cache=31536000"><link rel="manifest" href="/.nagi/manifest.json?nagi=b8ef2fba1e&cache=31536000"> …
+  css-browser: /.nagi/nagi.css?nagi=5c15f771b5&cache=31536000
+  js-browser: /.nagi/nagi.js?nagi=ed23f390b2&cache=31536000
+  js-other: /.nagi/nagi-pages.js?nagi=e8ea5630fb&cache=31536000
+  html-head-s: <link rel="stylesheet" href="/.nagi/nagi-pages.css?nagi=0c6fcba267&cache=31536000"><link rel="manifest" href="/.nagi/manifest.json?nagi=b8ef2fba1e&cache=31536000"> …
 
 [/.nagi]
   /path/to/nagi/theme
@@ -127,6 +128,18 @@ Works great over [Tailscale](https://tailscale.com): just bind copyparty to `127
 3. Open it from the home screen. It runs full screen with no address bar, and you stay signed in.
 
 On mobile, Search / Upload / Settings / More live in the bottom bar. **More → Sign in** takes you to the sign-in page and brings you back to the same folder afterwards. Android/Chrome: menu → *Install app*.
+
+
+## Smart search
+
+Nagi can use two engines; you pick one in **Settings → Search engine**:
+
+- **Smart (EmbeddingGemma 2)** — meaning and keywords, including text inside documents. Needs the [`ext/nagi-search.py`](ext/nagi-search.py) sidecar (one stdlib Python file, next to your copyparty install, never inside `site-packages`).
+- **Default** — copyparty’s own `/?srch` filename index. Enable it with `e2d` + `e2ds` and `no-hash: .*`, and keep `--hist` / `--dbpath` outside any cloud-synced folder so online-only files are never downloaded.
+
+If Smart is unavailable, the drawer falls back to Default and shows a short note. Search always goes through copyparty with the user’s cookie; guests only see volumes they can read.
+
+Install and flags: [`ext/README.md`](ext/README.md). The `--on404` volflag uses a colon: `on404: /path/to/ext/nagi-search.py`. Bind the sidecar to `127.0.0.1` only.
 
 ## Tips
 
@@ -157,6 +170,6 @@ Full list in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## License
 
-[MIT](LICENSE) for Nagi's own code (see the koi note below).
+[MIT](LICENSE) for Nagi's own code.
 
 **Note on the koi pond:** `src/koi.js` (and the koi part of the built `theme/nagi.js`) is adapted from Mia-lab's koi pond, linked above. The original was published without a licence notice, so the MIT licence does **not** cover those adapted portions, and their original author keeps all rights to them. copyparty isn't included here, only linked. Fonts and icons keep their own licences.

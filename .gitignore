@@ -3,3 +3,6 @@ __pycache__/
 *.pyc
 .cfg/
 .hist/
+
+# local helper (may contain a demo account); hashes live in hashes.json
+theme/run-local.sh

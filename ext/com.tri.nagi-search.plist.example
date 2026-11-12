@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.tri.nagi-search</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/YOU/dev/copyparty-dropbox/.venv/bin/python3</string>
+    <string>/Users/YOU/dev/copyparty-dropbox/ext/nagi-search.py</string>
+    <string>serve</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/Users/YOU/dev/copyparty-dropbox</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/Users/YOU/dev/copyparty-dropbox/semantic/stdout.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/YOU/dev/copyparty-dropbox/semantic/stderr.log</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/Users/YOU/.local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>HOME</key>
+    <string>/Users/YOU</string>
+    <key>PYTHONUNBUFFERED</key>
+    <string>1</string>
+  </dict>
+</dict>
+</plist>

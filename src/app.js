@@ -471,25 +471,65 @@ var SHEETS={
   s.querySelector('[data-u=f]').onclick=function(){A.pickFiles()};s.querySelector('[data-u=d]').onclick=function(){A.pickFolder()};
   var dz=s.querySelector('.drop');dz.style.color='var(--n-ink)';
   renderOpts(s.querySelector('.opts'));pollUps(true)},
- search:function(s){s.innerHTML=head('Search','Names, artists, albums and titles, across every folder you can open.')+'<div class="sh-b"><label class="field">'+ic('search')+'<input type="search" autofocus placeholder="Try “evening” or “kyoto”" aria-label="Search"></label><div class="res" style="margin-top:14px"></div></div>';
+ search:function(s){s.innerHTML=head('Search',(A.engine&&A.engine()=='smart')?'Describe it, or type a name. Smart search looks inside files you can open.':'Names, artists, albums and titles, across every folder you can open.')+'<div class="sh-b"><label class="field">'+ic('search')+'<input type="search" autofocus placeholder="Try “evening” or “kyoto”" aria-label="Search"></label><div class="res" style="margin-top:14px"></div></div>';
   var inp=s.querySelector('input'),res=s.querySelector('.res'),n=0;
-  function run(){var q=inp.value.trim(),me=++n;if(q.length<2){res.innerHTML='<p class="hint">Type at least two letters. Results come from the server index, so they include folders you have not opened yet.</p>';return}
-   res.innerHTML='<p class="hint">Looking…</p>';A.search(q).then(function(hits){if(me!=n)return;if(!hits.length){res.innerHTML='<p class="hint">Nothing called “'+esc(q)+'”. Try fewer letters, or another word from the name.</p>';return}
+  function paint(q,hits,note){
+    if(!hits.length){
+      res.innerHTML='<p class="hint">Nothing called “'+esc(q)+'”. Try fewer letters, or another word'+(note?'':' from the name')+'.</p>'+(note?'<p class="hint">'+note+'</p>':'');
+      return;
+    }
     var re=new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','ig');
-    res.innerHTML='<div class="lab">'+pl(hits.length,'other').replace('files','results').replace('file','result')+'</div>'+hits.slice(0,80).map(function(h,i){var t=h.isDir?'folder':ftype(h.name);return '<div class="sr" data-i="'+i+'"><span class="ic" style="background:'+tone(t)+';color:'+(lum(tone(t))<.5?'var(--on-dark)':'var(--on-light)')+'">'+ic(ICO[t])+'</span><div><b>'+esc(h.name).replace(re,'<mark>$1</mark>')+'</b><span>'+esc(decodeURIComponent(h.dir)||'/')+(h.tags&&h.tags.artist?' · '+esc(h.tags.artist):'')+'</span></div><span class="sz">'+fs(h.size)+'</span></div>'}).join('');
-    [].forEach.call(res.querySelectorAll('.sr'),function(r){r.onclick=function(){var h=hits[r.dataset.i];closeSheet();var tgt=h.isDir?h.path:h.dir;var after=function(){if(!h.isDir){st.sel=[h.path];refresh()}};if(tgt==st.path)after();else{go(tgt);var w=setInterval(function(){if(st.path==tgt&&st.data){clearInterval(w);setTimeout(after,500)}},100)}}})},function(){res.innerHTML='<p class="hint">Search is not available on this server.</p>'})}
-  inp.oninput=debounce(run,220);run()},
+    var lab='<div class="lab">'+pl(hits.length,'other').replace('files','results').replace('file','result')+'</div>';
+    res.innerHTML=(note?'<p class="hint">'+note+'</p>':'')+lab+hits.slice(0,80).map(function(h,i){
+      var t=h.isDir?'folder':ftype(h.name);
+      var sub=esc(decodeURIComponent(h.dir)||'/')+(h.tags&&h.tags.artist?' · '+esc(h.tags.artist):'')+(h.snip?' · '+esc(h.snip):'');
+      return '<div class="sr" data-i="'+i+'"><span class="ic" style="background:'+tone(t)+';color:'+(lum(tone(t))<.5?'var(--on-dark)':'var(--on-light)')+'">'+ic(ICO[t])+'</span><div><b>'+esc(h.name).replace(re,'<mark>$1</mark>')+'</b><span>'+sub+'</span></div><span class="sz">'+fs(h.size)+'</span></div>';
+    }).join('');
+    [].forEach.call(res.querySelectorAll('.sr'),function(el){
+      el.onclick=function(){
+        var h=hits[el.dataset.i];
+        closeSheet();
+        var tgt=h.isDir?h.path:h.dir;
+        var after=function(){if(!h.isDir){st.sel=[h.path];refresh()}};
+        if(tgt==st.path) after();
+        else {
+          go(tgt);
+          var w=setInterval(function(){if(st.path==tgt&&st.data){clearInterval(w);setTimeout(after,500)}},100);
+        }
+      };
+    });
+  }
+  function run(){
+    var q=inp.value.trim(),me=++n;
+    if(q.length<2){res.innerHTML='<p class="hint">Type at least two letters. Results include folders you have not opened yet.</p>';return}
+    res.innerHTML='<p class="hint">Looking…</p>';
+    var se=A.engine?A.engine():'smart';
+    function deflt(){return A.search(q).then(function(hits){return {hits:hits||[],engine:'default'}})}
+    var req=(se==='smart'&&A.smartSearch)
+      ? A.smartSearch(q).then(function(r){return r},function(){return deflt().then(function(r){r.fallback=true;return r})})
+      : deflt();
+    req.then(function(r){
+      if(me!=n)return;
+      paint(q,r.hits||[],r.fallback?'Smart search is off; showing filename matches.':'');
+    },function(){
+      if(me!=n)return;
+      res.innerHTML='<p class="hint">Search is not available on this server.</p>';
+    });
+  }
+    inp.oninput=debounce(run,220);run()},
  settings:function(s){var th=A.theme(),u=A.user,c=A.perms();
   s.innerHTML=head('Settings','Changes apply right away and stay on this device.')+'<div class="sh-b">'+
    '<div class="lab">Light</div><div class="choice" style="--n:3">'+
     ['paper:Paper:Cream daylight','yugure:Yūgure:Evening teal','sky:Follow the sky:Changes at dusk'].map(function(v){v=v.split(':');return '<button data-t="'+v[0]+'" class="'+(th==v[0]?'on':'')+'"><div class="sky">'+G.swatch(v[0]=='paper'?{w:200,h:80,seed:'pp',n:14,bg:'#F1EADB',tones:['#22302F','#7D8984','#DCD3C0'],ring:'#55625F',stroke:'#CEC4AE'}:v[0]=='yugure'?{w:200,h:80,seed:'yy',n:14,bg:'#0F1D1E',tones:['#E4DAC4','#6C8781','#2A4444'],ring:'#B9C5B9'}:{w:200,h:80,seed:'ss',n:14,bg:'#173031',tones:['#E4DAC4','#7D8984','#2F4B4A'],ring:'#B9C5B9',lit:3,litc:'#E07E24'})+'</div>'+v[1]+'<span>'+v[2]+'</span></button>'}).join('')+'</div>'+
-   '<div class="lab">Uploads</div><div class="opts"></div>'+
+   '<div class="lab">Search engine</div><div class="choice se" style="--n:2">'+'<button data-se="smart" class="'+( (A.engine?A.engine():'smart')=='smart'?'on':'')+'">Smart<span>Meaning and words, with EmbeddingGemma 2</span></button>'+'<button data-se="default" class="'+( (A.engine?A.engine():'smart')=='default'?'on':'')+'">Default<span>Filenames from copyparty’s index</span></button></div>'+'<p class="hint se-note"></p>'+'<div class="lab">Uploads</div><div class="opts"></div>'+
    '<div class="lab">Elsewhere</div>'+
     (A.classic?'<div class="tg" data-x="classic"><div><b>Classic copyparty view</b><span>Every tool, the original layout, same Nagi colours</span></div>'+ic('arrow-right')+'</div>':'')+
     (A.panelUrl?'<div class="tg" data-x="panel"><div><b>Control panel</b><span>Volumes, recent uploads, shares, connect as a drive</span></div>'+ic('arrow-right')+'</div>':'')+
    '<div class="lab">Account</div>'+(u?'<div class="tg" data-x="out"><div><b>Signed in as '+esc(u)+'</b><span>Sign out on this browser</span></div>'+ic('log-out')+'</div>':'<div class="tg" data-x="in"><div><b>You are browsing as a guest</b><span>Sign in to upload, share and tidy up</span></div>'+ic('log-in')+'</div>')+
    '<p class="hint" style="margin-top:22px">Nagi 凪 · a calm skin for copyparty. Icons: Lucide (ISC).</p></div>';
   [].forEach.call(s.querySelectorAll('[data-t]'),function(b){b.onclick=function(){A.setTheme(b.dataset.t);[].forEach.call(s.querySelectorAll('[data-t]'),function(o){o.classList.toggle('on',o==b)});setTimeout(function(){wallpaper();render(false)},30)}});
+  [].forEach.call(s.querySelectorAll('[data-se]'),function(b){b.onclick=function(){if(A.setEngine)A.setEngine(b.dataset.se);[].forEach.call(s.querySelectorAll('[data-se]'),function(o){o.classList.toggle('on',o==b)})}});
+  if(A.smartStatus)A.smartStatus().then(function(st){var n=s.querySelector('.se-note');if(!n)return;if(st&&st.sidecar!==false&&st.ok!==false)n.textContent=st.files!=null?('Smart is ready · '+st.files+' files indexed'+(st.vecs!=null?' · '+st.vecs+' passages':'')):'Smart is ready.';else n.textContent='Smart is not running on this server; Default still works.'},function(){var n=s.querySelector('.se-note');if(n)n.textContent='Smart is not running on this server; Default still works.'});
   renderOpts(s.querySelector('.opts'));
   [].forEach.call(s.querySelectorAll('[data-x]'),function(r){r.onclick=function(){var x=r.dataset.x;if(x=='classic')A.classic();if(x=='panel')location.href=A.panelUrl;if(x=='out')signOut();if(x=='in')signIn()}})},
  share:function(s,paths){var nm=paths.length==1?title(paths[0]):pl(paths.length,'other').replace('files','items');

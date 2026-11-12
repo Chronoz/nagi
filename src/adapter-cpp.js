@@ -38,6 +38,10 @@ var A={
    f.innerHTML='<input name="act" value="zip"><textarea name="files"></textarea>';f.querySelector('textarea').value=names.join('\n');document.body.appendChild(f);f.submit();setTimeout(function(){f.remove()},1000)},
  search:function(q){q=q.replace(/[*()]/g,' ').trim().replace(/\s+/g,' ');var w='*'+q.replace(/ /g,'*')+'*';
    return post('/?srch',JSON.stringify({q:'name like '+w+(window.have_tags_idx?' or tags like '+w:''),n:200}),'text/plain').then(function(t){var j=JSON.parse(t);return (j.hits||[]).map(function(h){var p='/'+h.rp,dir=p.replace(/[^\/]+$/,'');return {name:dec(p.split('/').pop()),path:p,dir:dir,size:h.sz,ts:h.ts,tags:h.tags||{},isDir:false}})})},
+ smartSearch:function(q){return fetch('/.nagi/sem?q='+encodeURIComponent(q),{credentials:'same-origin'}).then(function(r){return r.text().then(function(t){var j;try{j=JSON.parse(t)}catch(e){j=null}if(!r.ok||!j||j.sidecar===false)throw new Error((j&&j.error)||('HTTP '+r.status));return {hits:(j.hits||[]).map(function(h){var p=h.path||('/'+(h.rp||'')),dir=h.dir||p.replace(/[^\/]+$/,'');return {name:h.name||dec(p.split('/').pop()),path:p,dir:dir,size:h.size||h.sz||0,ts:h.ts,tags:h.tags||{},isDir:!!h.isDir,snip:h.snip||'',score:h.score,engine:'smart'}}),ms:j.ms,embedded:j.embedded,engine:'smart'}})})},
+ smartStatus:function(){return fetch('/.nagi/sem?ping=1',{credentials:'same-origin'}).then(function(r){return r.json().then(function(j){return j},function(){return {ok:false}})},function(){return {ok:false,sidecar:false}})},
+ engine:function(){return localStorage.nagi_search==='default'?'default':'smart'},
+ setEngine:function(v){localStorage.nagi_search=v==='default'?'default':'smart'},
  share:function(paths,o){var k=Math.random().toString(36).slice(2,8)+Math.random().toString(36).slice(2,6);
    return post('/?share',JSON.stringify({k:k,vp:paths.map(function(p){return dec(p)}),pw:o.pw||'',exp:String(o.exp),perms:o.perms||['read']}),'text/plain').then(function(t){var m=/created share:\s*(\S+)/.exec(t);if(!m)throw new Error(t.slice(0,160));return m[1]})},
  mkdir:function(dir,name){var fd=new FormData();fd.append('act','mkdir');fd.append('name',name);return post(dir,fd)},
