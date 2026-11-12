@@ -18,7 +18,7 @@ exec $CP -i "${BIND:-127.0.0.1}" -p "${PORT:-3979}" \
   -v "$HERE/theme:/.nagi:r" \
   --shr /shr -e2dsa -e2ts --u2j 4 \
   --themes 12 --theme 11 \
-  --css-browser '/.nagi/nagi.css?nagi=2e87bec3ef&cache=31536000' --js-browser '/.nagi/nagi.js?nagi=bb4c560a41&cache=31536000' \
+  --css-browser '/.nagi/nagi.css?nagi=54722e74d1&cache=31536000' --js-browser '/.nagi/nagi.js?nagi=1fc3d2dcea&cache=31536000' \
   --js-other '/.nagi/nagi-pages.js?nagi=a5332f4e96&cache=31536000' \
   --html-head-s '<link rel="stylesheet" href="/.nagi/nagi-pages.css?nagi=aea58f83eb&cache=31536000"><link rel="manifest" href="/.nagi/manifest.json?nagi=b8ef2fba1e&cache=31536000"><link rel="apple-touch-icon" href="/.nagi/icon-180.png?nagi=88d99dbc9b&cache=31536000"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Nagi"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">' \
   --favico "凪 17282B EEE5D1" --no-robots --name nagi

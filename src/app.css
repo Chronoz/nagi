@@ -50,7 +50,7 @@ html.fz #nagi{--w-bg:#0F1D1E;--w-bg2:#162A2A;--w-line:#22393A;--w-veil:rgba(10,2
 #nagi .chk{min-height:0;margin:0 -8px;padding:0 8px}
 #nagi .row{display:grid;grid-template-columns:18px 1fr auto;align-items:center;gap:11px;min-height:34px;border-bottom:1px solid var(--w-line);cursor:pointer;padding:0 4px;margin:0 -4px;border-radius:5px;transition:background .15s}
 #nagi .row:hover,#nagi .row.hov{background:var(--w-bg2)}
-#nagi .row .cb{width:16px;height:16px;border-radius:4px;border:1.3px solid var(--n-ink2);display:grid;place-items:center;transition:all .15s;color:var(--w-bg)}
+#nagi .row .cb{width:16px;height:16px;border-radius:4px;border:1.3px solid var(--n-ink2);display:grid;place-items:center;transition:background .15s,border-color .15s,color .15s;color:var(--w-bg);justify-self:center;box-sizing:border-box}
 #nagi .row.sel .cb{background:var(--n-ink);border-color:var(--n-ink)}
 #nagi .row .cb .ni{width:11px;height:11px;opacity:0}#nagi .row.sel .cb .ni{opacity:1}
 #nagi .row .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13.5px;color:var(--n-ink)}
@@ -385,7 +385,7 @@ html.fz #nagi svg.g .cell:not(.free):hover .f{filter:drop-shadow(0 6px 10px rgba
 #nagi .stage svg.g .cell.pondc .f{fill:none!important;stroke:none!important}
 
 /* v3g: rows carry a type icon; folders first, files grouped by type with quiet labels */
-#nagi .row{grid-template-columns:18px 15px 1fr auto}
+#nagi .row{grid-template-columns:18px 28px 1fr auto;gap:10px}
 #nagi .row.more,#nagi .row.rest{grid-template-columns:1fr auto}#nagi .row.more:not(.rest){grid-template-columns:1fr}
 #nagi .ty{display:grid;place-items:center;width:15px;height:15px;color:var(--n-mute)}
 #nagi .ty .ni{width:14px;height:14px}
@@ -599,4 +599,16 @@ html.fz #nagi svg.g .cell:not(.free):hover .f{filter:drop-shadow(0 6px 10px rgba
  /* the 4th (Changed) column was clipped on a 375px phone; Kind+Size are enough here */
  #nagi .lst th:nth-child(4),#nagi .lst td:nth-child(4){display:none}
  #nagi .lst td.nm{max-width:52vw}
+}
+
+/* v3q: comfortable gap between the checkbox and the icon/thumb.
+   Icon column is 28px so thumbs don't overflow into the name.
+   On mobile the visible box stays 16px; a ::before expands the tap target
+   to 28×36 without growing the bordered square (which used to sit 1px from the icon). */
+#nagi .row .ty{width:28px;height:28px}
+#nagi .sr{content-visibility:auto;contain-intrinsic-size:auto 52px}
+@media (max-width:760px){
+ #nagi .row{grid-template-columns:28px 28px 1fr auto;column-gap:10px}
+ #nagi .chk .cb{min-width:0;min-height:0;width:16px;height:16px;position:relative;justify-self:center}
+ #nagi .chk .cb::before{content:"";position:absolute;left:-6px;right:-6px;top:-10px;bottom:-10px}
 }
