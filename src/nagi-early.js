@@ -41,11 +41,13 @@
   }catch(e){}
 })();
 
-/* v4: first paint. The sand splash lives in the inlined head CSS (html::before)
-   so it paints with the first bytes — same colour and mark as the iOS launch
-   image. This only (a) honours a stored yūgure theme so we do not flash paper,
-   (b) promotes the non-blocking stylesheets once they arrive, and (c) fades
-   the splash after #nagi has painted, only if it is still up. */
+/* v4.1.1: splash lives in the inlined head CSS, but ONLY on html#ht_brw
+   (the file browser / garden). Login, ?h, 401/403, the md editor, ?ups and
+   other copyparty pages never create #nagi, so waiting for it left them
+   covered forever. This IIFE (a) honours a stored yūgure theme, (b) promotes
+   the non-blocking stylesheets on every page, and (c) dismisses the splash
+   on #nagi, on DOMContentLoaded / load if #nagi is absent, or after 1.2s,
+   whichever comes first. The layer is pointer-events:none the whole time. */
 (function(){
   try{
     var t=localStorage.nagi_theme;
@@ -61,34 +63,59 @@
     if(l.sheet)go();else l.addEventListener('load',go);
     l.addEventListener('error',go);
   }
-  promote('nagi-pages-css');promote('nagi-css');
-  function fade(){
+  function promoteAll(){promote('nagi-pages-css');promote('nagi-css')}
+  promoteAll();
+  var done=0,mo,iv;
+  function cleanup(){
+    if(mo)try{mo.disconnect()}catch(e){}
+    mo=null;
+    if(iv){clearInterval(iv);iv=0}
+  }
+  function fade(force){
     var h=document.documentElement;
-    if(h.classList.contains('nagi-ready')||h.classList.contains('nagi-booted'))return;
-    if(!document.getElementById('nagi'))return;
+    if(h.classList.contains('nagi-booted')){cleanup();return}
+    // Non-browser pages (login, ?h, 401, md, …): take the layer off at once.
+    var browser=h.id==='ht_brw'||!!document.getElementById('nagi');
+    if(!browser||force==='now'){
+      h.classList.add('nagi-ready');h.classList.add('nagi-booted');cleanup();return;
+    }
+    if(h.classList.contains('nagi-ready'))return;
     requestAnimationFrame(function(){requestAnimationFrame(function(){
       if(h.classList.contains('nagi-booted'))return;
       h.classList.add('nagi-ready');
-      setTimeout(function(){h.classList.add('nagi-booted')},500);
+      setTimeout(function(){h.classList.add('nagi-booted');cleanup()},500);
     })});
   }
-  var mo,watching=0;
-  function watch(){
-    if(watching){if(document.getElementById('nagi'))fade();return}
-    watching=1;
-    if(document.getElementById('nagi')){fade();return}
-    if(window.MutationObserver&&(document.body||document.documentElement)){
-      mo=new MutationObserver(function(){if(document.getElementById('nagi')){try{mo.disconnect()}catch(e){}fade()}});
-      mo.observe(document.body||document.documentElement,{childList:true,subtree:true});
-    }
-    var n=0,iv=setInterval(function(){
-      if(document.getElementById('nagi')){clearInterval(iv);if(mo)try{mo.disconnect()}catch(e){}fade()}
-      else if(++n>400)clearInterval(iv);
-    },16);
+  function onNagi(){
+    if(document.getElementById('nagi')){cleanup();fade();return true}
+    return false;
   }
-  if(document.body)watch();
-  else{
-    document.addEventListener('DOMContentLoaded',watch);
-    try{var mo0=new MutationObserver(function(){if(document.body){try{mo0.disconnect()}catch(e){}watch()}});mo0.observe(document.documentElement,{childList:true})}catch(e){}
+  function onReady(){
+    promoteAll();
+    if(onNagi())return;
+    // Document is ready and there is no garden: this is login / ?h / an error page.
+    fade('now');
   }
+  // Known from the first byte on every copyparty page: html#ht_spl (login),
+  // ht_msg (error / 401), ht_svc (?h), ht_shr, ht_rup. Dismiss immediately.
+  if(document.documentElement.id&&document.documentElement.id!=='ht_brw'){
+    fade('now');return;
+  }
+  if(onNagi())return;
+  if(document.readyState==='complete'||document.readyState==='interactive'){
+    // Parsed, still no #nagi: give the deferred nagi.js a tick, then give up.
+    setTimeout(function(){if(!onNagi())onReady()},0);
+  }else{
+    document.addEventListener('DOMContentLoaded',onReady);
+    try{var mo0=new MutationObserver(function(){if(onNagi()){try{mo0.disconnect()}catch(e){}}});mo0.observe(document.documentElement,{childList:true,subtree:true});mo=mo0}catch(e){}
+  }
+  addEventListener('load',function(){if(!document.getElementById('nagi'))onReady()});
+  setTimeout(function(){if(!document.documentElement.classList.contains('nagi-ready')&&!document.documentElement.classList.contains('nagi-booted'))fade('now')},1200);
+  if(window.MutationObserver&&!mo){
+    try{mo=new MutationObserver(function(){onNagi()});mo.observe(document.documentElement,{childList:true,subtree:true})}catch(e){}
+  }
+  var n=0;iv=setInterval(function(){
+    if(onNagi())return;
+    if(++n>80){clearInterval(iv);iv=0} // ~1.3s at 16ms, timeout above already fired
+  },16);
 })();

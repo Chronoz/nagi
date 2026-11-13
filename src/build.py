@@ -216,10 +216,10 @@ def critical_css():
     return (
         'html,body{background:#F1EADB;margin:0}'
         'html.nagi-dark,html.nagi-dark body,html.z,html.z body,html.fz,html.fz body{background:#0F1D1E}'
-        'html::before{content:"";position:fixed;inset:0;z-index:2147483646;'
+        'html#ht_brw::before{content:"";position:fixed;inset:0;z-index:2147483646;'
         'background:#F1EADB url("' + u + '") center center/96px 96px no-repeat;pointer-events:none}'
-        'html.nagi-dark::before,html.z::before,html.fz::before{background-color:#0F1D1E;background-image:url("' + ud + '")}'
-        'html.nagi-ready::before{opacity:0;transition:opacity .45s cubic-bezier(.2,.8,.2,1)}'
+        'html#ht_brw.nagi-dark::before,html#ht_brw.z::before,html#ht_brw.fz::before{background-color:#0F1D1E;background-image:url("' + ud + '")}'
+        'html.nagi-ready::before,html.nagi-booted::before{opacity:0;pointer-events:none;transition:opacity .45s cubic-bezier(.2,.8,.2,1)}'
         'html.nagi-booted::before{content:none;display:none}'
     )
 
@@ -252,8 +252,8 @@ def v4_head(hashes: dict) -> str:
     )
     # Non-blocking stylesheets: media=print until early.js (or load) promotes them to all.
     css = (
-        '<link rel="stylesheet" id="nagi-pages-css" href="' + verb('nagi-pages.css') + '" media="print">'
-        '<link rel="stylesheet" id="nagi-css" href="' + verb('nagi.css') + '" media="print">'
+        '<link rel="stylesheet" id="nagi-pages-css" href="' + verb('nagi-pages.css') + '" media="print" onload="this.media=&quot;all&quot;">'
+        '<link rel="stylesheet" id="nagi-css" href="' + verb('nagi.css') + '" media="print" onload="this.media=&quot;all&quot;">'
     )
     vp = (
         '<script nonce="{{ js_nonce }}">(function(){var c="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",'
