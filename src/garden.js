@@ -75,7 +75,9 @@ function layout(items,bound,o){
   // first ring around the pinned stone: the next few stones, largest at the middle of the arc,
   // smaller ones toward its ends, so the pinned stone's edge reads as one smooth curve
   var rF=cor?Math.sqrt(4*tgt[ai]/Math.PI):0,ring=cor?Math.min(n-1,n>12?6:n>6?5:4):0,RA=[];
-  if(ring){var mid=[.5,.24,.76,.06,.94,.38,.62].slice(0,ring);RA=mid}
+  if(ring){var mid=[.5,.24,.76,.06,.94,.38,.62].slice(0,ring);
+    if(o.compose){var rc=rng(hash((o.seed||'')+'|ra'));mid=mid.map(function(a){return Math.max(.04,Math.min(.96,a+(rc()-.5)*.16))})}
+    RA=mid}
   for(var k=0;k<n;k++){var i=order[k],rr=rng(hash((o.seed||'')+'|'+(items[i].key||(''+i)))),x,y,tries=0;
     if(cor&&i===ai){var r0=Math.sqrt(4*tgt[i]/Math.PI);x=cor[0]+r0*sx*.34;y=cor[1]+r0*sy*.34}
     else if(items[i].pin==='br'){var pr=Math.sqrt(Math.max(tgt[i],400)/Math.PI);x=bb[2]-Math.max(24,Math.min(pr*.55,W*.22));y=bb[3]-Math.max(24,Math.min(pr*.55,H*.22))}

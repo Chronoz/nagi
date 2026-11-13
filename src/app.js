@@ -126,12 +126,13 @@ function memKey(p){return (p||'/')+'\0'+(A.dots&&A.dots()?'1':'0')+'\0'+(A.user|
 function snapScroll(){var lst=$.stage&&$.stage.querySelector('.lst');return {bd:$.bd&&$.bd.scrollTop||0,chk:$.chk&&$.chk.scrollTop||0,lst:lst&&lst.scrollTop||0}}
 function applyScroll(sc){if(!sc)return;function put(){if($.bd)$.bd.scrollTop=sc.bd||0;if($.chk)$.chk.scrollTop=sc.chk||0;var lst=$.stage&&$.stage.querySelector('.lst');if(lst)lst.scrollTop=sc.lst||0}put();requestAnimationFrame(put)}
 function gardenCap(){return innerWidth<=760?6:20}
-function sizeKey(){return innerWidth+'x'+innerHeight+'@'+(innerWidth<=760?'m':'d')+'c'+gardenCap()}
+function gardenVer(){return 2}
+function sizeKey(){return innerWidth+'x'+innerHeight+'@'+(innerWidth<=760?'m':'d')+'c'+gardenCap()+'v'+gardenVer()}
 function memSave(){
   if(!st.path||!st.data)return;
   if(st.view=='garden'&&$.zoom)[].forEach.call($.zoom.querySelectorAll('.cell.in'),function(g){g.classList.remove('in')});
   var garden=st.view=='garden'&&$.zoom?{zoom:$.zoom.innerHTML,lbs:$.lbs?$.lbs.innerHTML:'',cells:st.cells,band:st.band,hole2:st.hole2}:null;
-  MEM[memKey(st.path)]={t:Date.now(),data:st.data,view:st.view,scroll:snapScroll(),acct:A.user||'*',sk:sizeKey(),gc:gardenCap(),garden:garden};
+  MEM[memKey(st.path)]={t:Date.now(),data:st.data,view:st.view,scroll:snapScroll(),acct:A.user||'*',sk:sizeKey(),gc:gardenCap(),gv:gardenVer(),garden:garden};
   var ks=Object.keys(MEM);if(ks.length>MEMN){ks.sort(function(a,b){return MEM[a].t-MEM[b].t});for(var i=0;i<ks.length-MEMN;i++)delete MEM[ks[i]]}
   memPersist();
 }
@@ -139,10 +140,10 @@ function memPersist(){
   try{
     var k=st.path&&memKey(st.path),e=k&&MEM[k];
     if(!e||!e.data)return;
-    var g=e.garden,dump={k:k,path:st.path,t:e.t,data:e.data,view:e.view,scroll:e.scroll,acct:e.acct,sk:e.sk,gc:e.gc!=null?e.gc:gardenCap(),
+    var g=e.garden,dump={k:k,path:st.path,t:e.t,data:e.data,view:e.view,scroll:e.scroll,acct:e.acct,sk:e.sk,gc:e.gc!=null?e.gc:gardenCap(),gv:e.gv!=null?e.gv:gardenVer(),
       garden:g&&{zoom:g.zoom,lbs:g.lbs,band:g.band,hole2:g.hole2,cells:g.cells}};
     localStorage.setItem('nagi_mem',JSON.stringify(dump));
-  }catch(err){try{var e2=MEM[memKey(st.path)];if(e2)localStorage.setItem('nagi_mem',JSON.stringify({k:memKey(st.path),path:st.path,t:e2.t,data:e2.data,view:e2.view,scroll:e2.scroll,acct:e2.acct,sk:e2.sk,gc:e2.gc!=null?e2.gc:gardenCap(),garden:e2.garden&&{zoom:e2.garden.zoom,lbs:e2.garden.lbs}}))}catch(e3){}}
+  }catch(err){try{var e2=MEM[memKey(st.path)];if(e2)localStorage.setItem('nagi_mem',JSON.stringify({k:memKey(st.path),path:st.path,t:e2.t,data:e2.data,view:e2.view,scroll:e2.scroll,acct:e2.acct,sk:e2.sk,gc:e2.gc!=null?e2.gc:gardenCap(),gv:e2.gv!=null?e2.gv:gardenVer(),garden:e2.garden&&{zoom:e2.garden.zoom,lbs:e2.garden.lbs}}))}catch(e3){}}
 }
 function memHydrate(){
   try{
@@ -175,7 +176,7 @@ function restoreFolder(path,cached){
   if(window.NagiKoi)NagiKoi.reset();$.lbs.style.opacity='';
   try{void $.zoom.getBoundingClientRect()}catch(e){}$.zoom.style.transition='';
   var g=cached.garden;
-  if(g&&g.zoom&&cached.view==='garden'&&st.view==='garden'&&cached.sk===sizeKey()&&cached.gc===gardenCap()){
+  if(g&&g.zoom&&cached.view==='garden'&&st.view==='garden'&&cached.sk===sizeKey()&&cached.gc===gardenCap()&&cached.gv===gardenVer()){
     if(!st.data.all)st.data.all=st.data.items;
     [].forEach.call($.gh.querySelectorAll('.seg button'),function(b){b.classList.toggle('on',b.dataset.v==st.view)});
     var nd=st.data.items.filter(function(x){return x.isDir}).length,nf=st.data.items.length-nd;$.cnt.textContent=pl(nd,'folder')+' · '+(nf==1?'1 file':nf+' files');
@@ -451,6 +452,27 @@ function moreWeight(stones,floor){
   if(hi-lo>1e-6){if(mw>=hi)mw=hi-(hi-lo)*.4;if(mw<lo)mw=lo}
   else mw=lo;
   return mw}
+/* When the visible stones are nearly the same size (max/min < 1.5), a
+   folder of photos would pack into an even, artificial grid. Replace
+   those weights with a deterministic karesansui profile, seeded by the
+   folder path so a reload is identical: one large stone, one medium-
+   large, +N third, then smaller. Real byte sizes still appear on the
+   labels. Folders whose sizes already differ (Photos) are left alone. */
+function nearUniform(stones){var ws=stones.map(function(o){return o.weight}).filter(function(w){return w>0});if(ws.length<3)return false;var mx=Math.max.apply(null,ws),mn=Math.min.apply(null,ws);return mn>0&&mx/mn<1.5}
+function composeShares(N,seed){
+  var second=N<=6?.46:N<=10?.5:.55,q=N<=6?.74:N<=10?.8:.85;
+  var raw=[1,second];for(var i=2;i<N;i++)raw.push(raw[i-1]*q);
+  var r=G.rng(G.hash(String(seed||'')+'|cw')),i,s=0;
+  for(i=0;i<N;i++){raw[i]*=.94+.12*r();if(i&&raw[i]>=raw[i-1])raw[i]=raw[i-1]*.88;s+=raw[i]}
+  for(i=0;i<N;i++)raw[i]/=s;
+  return raw}
+function applyCompose(stones,more,seed){
+  var N=stones.length+(more?1:0),shares=composeShares(N,seed);
+  var ord=stones.slice().sort(function(a,b){return (b.weight-a.weight)||(a.key||'').localeCompare(b.key||'')});
+  var k=0;
+  for(var i=0;i<ord.length;i++){if(more&&k===2)k++;ord[i].weight=shares[k];k++}
+  if(more)more.weight=shares[2];
+}
 function items(){var d=st.data,list=d.items.slice(),out=[],sum=0,mx=0,cap=gardenCap();
   /* v3x / v4.1.4: at most 6 cells on a narrow screen (5 stones + "+N"
      when the folder overflows; 6 or fewer items show them all, no "+N"),
@@ -462,9 +484,16 @@ function items(){var d=st.data,list=d.items.slice(),out=[],sum=0,mx=0,cap=garden
   list.forEach(function(x){var w=Math.pow((x.size||0)+1,.62);mx=Math.max(mx,w);out.push({key:x.path,weight:w,x:x});sum+=w});
   /* v3z2: +N is a genuine cell in the tessellation, pinned to the
      bottom-right so neighbours curve around it with the same gutter. */
-  st.moreRest=rest;
+  st.moreRest=rest;st.composed=false;
   var n=out.length,floor=Math.max(sum*(n>24?.0045:.012),mx*.012,1);out.forEach(function(o){o.weight=Math.max(o.weight,floor)});sum=out.reduce(function(a,o){return a+o.weight},0);
-  if(rest){var mw=moreWeight(out,floor);out.push({key:'more',weight:mw,more:rest,pin:'br'});sum+=mw}
+  var uni=nearUniform(out);
+  if(uni)st.composed=true;
+  if(rest){
+    var more={key:'more',weight:1,more:rest,pin:'br'};
+    if(uni)applyCompose(out,more,st.path);
+    else more.weight=moreWeight(out,floor);
+    out.push(more);sum=out.reduce(function(a,o){return a+o.weight},0);
+  }else if(uni){applyCompose(out,null,st.path);sum=out.reduce(function(a,o){return a+o.weight},0)}
   st.ups.filter(function(u){return u.dir==st.path&&u.state!='ok'}).forEach(function(u){if(list.some(function(x){return x.name==u.name}))return;var w=Math.max(Math.pow(u.size+1,.62),floor);out.push({key:'up:'+u.name,weight:w,up:u});sum+=w});
   if(st.path=='/'&&d.free!=null){var fw=Math.min(sum*.5,Math.max(sum*.3,Math.pow(d.free,.62)));out.push({key:'free',weight:fw||1,free:1,anchor:st.anchor})}
   return out}
@@ -488,7 +517,7 @@ function rakeRings(p,step,maxn,amt){
   });
 }
 function fieldLayout(it,W,H,M0,hole,mob){var R=mob?22:34,iter=it.length>40?48:64;st.band=null;st.moreSlot=null;try{performance.mark("nagi-layout-start")}catch(e){}
-  if(!hole||hole[3]>H-60){var x0=hole?hole[2]:M0;return G.layout(it,G.roundRect(x0,M0,W-M0-x0,H-2*M0,R),{seed:st.path,iter:iter,corner:[x0+2,M0+2]})}
+  if(!hole||hole[3]>H-60){var x0=hole?hole[2]:M0;return G.layout(it,G.roundRect(x0,M0,W-M0-x0,H-2*M0,R),{seed:st.path,iter:iter,corner:[x0+2,M0+2],compose:!!st.composed})}
   var X=hole[2],Y=hole[3],B=H-M0,bh=B-Y,bw=X-M0;
   // the strip under the column: real stones sit in a fan-shaped patch toward the field (top edge rising to
   // the right, left edge leaning in); the rest is negative space with a few ghost pebbles, sparser to the left.
@@ -498,11 +527,11 @@ function fieldLayout(it,W,H,M0,hole,mob){var R=mob?22:34,iter=it.length>40?48:64
   var big=it.slice().sort(function(a,b){return b.weight-a.weight})[0],cand=it.filter(function(o){return !o.free&&!o.more&&o!==big}).sort(function(a,b){return (G.hash(a.key+'|b')%997)-(G.hash(b.key+'|b')%997)});
   var two=[],w2=0;cand.forEach(function(o){if(w2+o.weight<=want*1.12){two.push(o);w2+=o.weight}});
   if(!two.length&&cand.length>=2){var sm=cand.slice().sort(function(a,b){return a.weight-b.weight})[0];two.push(sm);w2=sm.weight}
-  if(!two.length||it.length-two.length<2||bh<80){return G.layout(it,G.roundRect(X,M0,W-M0-X,H-2*M0,R),{seed:st.path,iter:iter,corner:[X+2,M0+2]})}
+  if(!two.length||it.length-two.length<2||bh<80){return G.layout(it,G.roundRect(X,M0,W-M0-X,H-2*M0,R),{seed:st.path,iter:iter,corner:[X+2,M0+2],compose:!!st.composed})}
   var one=it.filter(function(o){return two.indexOf(o)<0});
   // keep sizes honest: if the band stones weigh less than their share, pull the patch's left edge in
   if(w2<want*.9){var f=Math.max(.45,w2/want),nx=X-(X-(M0+cutX*.7))*f;bp=[[Math.max(nx,M0+cutX*.7),Y+lead],[Math.max(nx,M0+cutX*.7)+bw*.2*f,Y+lead*.28],[X,Y],[X,B],[Math.max(nx-cutX*.6*f,M0+cutX*.7),B]]}
-  var c1=G.layout(one,G.roundRect(X,M0,W-M0-X,H-2*M0,R),{seed:st.path,iter:iter,corner:[X+2,M0+2]}),c2=G.layout(two,bp,{seed:st.path+'|band',iter:iter});
+  var c1=G.layout(one,G.roundRect(X,M0,W-M0-X,H-2*M0,R),{seed:st.path,iter:iter,corner:[X+2,M0+2],compose:!!st.composed}),c2=G.layout(two,bp,{seed:st.path+'|band',iter:iter,compose:!!st.composed});
   st.band={x0:M0,y0:Y,x1:X,y1:B,poly:bp};st.hole2=[-1e4,-1e4,X,Y];return c1.concat(c2)}
 function loadKoi(cb){if(window.NagiKoi){if(cb)cb();return}if(window.__nagiKoiLoading){if(cb)(window.__nagiKoiCbs=window.__nagiKoiCbs||[]).push(cb);return}window.__nagiKoiLoading=1;var s=document.createElement('script');s.src='__NAGI_KOI_URL__';s.async=true;var n=document.currentScript&&document.currentScript.nonce||(document.querySelector('script[nonce]')||{}).nonce;if(n)s.setAttribute('nonce',n);s.onload=function(){window.__nagiKoiLoading=0;var q=window.__nagiKoiCbs||[];window.__nagiKoiCbs=null;q.forEach(function(f){try{f()}catch(e){}});if(cb)cb();if(st.view=='garden'&&st.cells)pondUp(st.cells)};s.onerror=function(){window.__nagiKoiLoading=0};(document.head||document.documentElement).appendChild(s)}
 function pondUp(cells){if(!window.NagiKoi){loadKoi();return}var best=null;cells.forEach(function(c){if(c.d&&c.item.free)best=c});
@@ -622,7 +651,7 @@ function render(anim){if(!st.data)return;if(!st.data.all)st.data.all=st.data.ite
   var it=items();
   if(!it.length){$.zoom.innerHTML='';$.lbs.innerHTML='<div class="empty" style="left:'+(hole?hole[2]:0)+'px"><div><div class="pebble0"></div><h3>An empty clearing</h3><p class="hint">Drop files anywhere, or use Upload.</p></div></div>';st.cells=[];return}
   st.hole2=null;var M0=mob?4:8,tL=typeof performance!="undefined"?performance.now():0,cells=fieldLayout(it,W,H,M0,hole,mob);
-  if(innerWidth<=760)cells=fitMoreArea(it,cells,function(){return fieldLayout(it,W,H,M0,hole,mob)});
+  if(innerWidth<=760||st.composed)cells=fitMoreArea(it,cells,function(){return fieldLayout(it,W,H,M0,hole,mob)});
   st.cells=cells;try{performance.measure("nagi-layout","nagi-layout-start");performance.mark("nagi-layout-end")}catch(e){}
   var svg='',lbs='',sandI=-1,sandA=0;cells.forEach(function(c,i){var o=c.item,x=o.x;if(st.path!='/')return;if(o.free||o.up||!x)return;if((x.type=='image'||x.type=='video')&&A.thumb)return;if(c.area>sandA){sandA=c.area;sandI=i}});
   cells.forEach(function(c,i){c.idx=i;var o=c.item,x=o.x,poly=G.inset(c.poly,gap/2);if(poly.length<3)return;
