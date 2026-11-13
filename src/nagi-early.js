@@ -87,6 +87,8 @@
     },16);
   }
   if(document.body)watch();
-  else document.addEventListener('DOMContentLoaded',watch);
-  try{new MutationObserver(function(){if(document.body)watch()}).observe(document.documentElement,{childList:true})}catch(e){}
+  else{
+    document.addEventListener('DOMContentLoaded',watch);
+    try{var mo0=new MutationObserver(function(){if(document.body){try{mo0.disconnect()}catch(e){}watch()}});mo0.observe(document.documentElement,{childList:true})}catch(e){}
+  }
 })();

@@ -6,7 +6,7 @@ function ic(n){return '<i class="ni" style="--ni:var(--ni-'+n+')"></i>'}
 function q(s,r){return (r||document).querySelector(s)}
 function qa(s,r){return [].slice.call((r||document).querySelectorAll(s))}
 function mk(tag,cls,html){var e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e}
-try{var t=localStorage.nagi_theme;if(t=='sky'){var h=new Date().getHours();t=h>=17||h<6?'yugure':'paper'}if(t&&(id=='ht_spl'||id=='ht_msg'||id=='ht_svc'||id=='ht_shr'||id=='ht_rup')){H.className=t=='yugure'?'fz f z':'fy f y'}}catch(e){}
+try{var t=localStorage.nagi_theme;if(t=='sky'){var h=new Date().getHours();t=h>=17||h<6?'yugure':'paper'}if(t&&(id=='ht_spl'||id=='ht_msg'||id=='ht_svc'||id=='ht_shr'||id=='ht_rup')){(function(){var c=t=='yugure'?'fz f z':'fy f y';['fz','fy','z','y'].forEach(function(x){H.classList.remove(x)});c.split(/\s+/).forEach(function(x){if(x)H.classList.add(x)});if(t=='yugure')H.classList.add('nagi-dark');else H.classList.remove('nagi-dark')})()}}catch(e){}
 if(id=='ht_msg'){ // "naw dude" = wrong password; show a calm line and go back to the sign-in card
   var b=q('#box'),t=(b&&b.textContent||'').toLowerCase();
   if(/naw dude|wrong|invalid/.test(t)){try{sessionStorage.nagi_bad='1'}catch(e){}for(var i=0;i<200;i++)clearTimeout(i);

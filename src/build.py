@@ -215,10 +215,10 @@ def critical_css():
     # #F1EADB is --w-bg on #nagi (the surface the user sees). Mark is 96 CSS px, centred.
     return (
         'html,body{background:#F1EADB;margin:0}'
-        'html.nagi-dark,html.nagi-dark body{background:#0F1D1E}'
+        'html.nagi-dark,html.nagi-dark body,html.z,html.z body,html.fz,html.fz body{background:#0F1D1E}'
         'html::before{content:"";position:fixed;inset:0;z-index:2147483646;'
         'background:#F1EADB url("' + u + '") center center/96px 96px no-repeat;pointer-events:none}'
-        'html.nagi-dark::before{background-color:#0F1D1E;background-image:url("' + ud + '")}'
+        'html.nagi-dark::before,html.z::before,html.fz::before{background-color:#0F1D1E;background-image:url("' + ud + '")}'
         'html.nagi-ready::before{opacity:0;transition:opacity .45s cubic-bezier(.2,.8,.2,1)}'
         'html.nagi-booted::before{content:none;display:none}'
     )
@@ -236,6 +236,8 @@ def v4_head(hashes: dict) -> str:
         '<script nonce="{{ js_nonce }}">(function(){try{var t=localStorage.nagi_theme;'
         'if(t==="yugure"||(!t&&/\\bfz\\b/.test(document.documentElement.className))){'
         'document.documentElement.classList.add("nagi-dark");'
+        'var m=document.querySelector("meta[name=theme-color]");'
+        'if(m)m.setAttribute("content","#0F1D1E");'
         '}}catch(e){}})();</script>'
     )
     style = '<style>' + critical_css() + '</style>'
@@ -262,7 +264,8 @@ def v4_head(hashes: dict) -> str:
     early = '<script nonce="{{ js_nonce }}" src="' + verb('nagi-early.js') + '"></script>'
     # defer: parse the document (and paint the sand splash) without waiting on 155 KB of JS
     nagi = '<script nonce="{{ js_nonce }}" defer src="' + verb('nagi.js') + '"></script>'
-    return theme_js + style + meta + ''.join(tags) + css + vp + early + nagi
+    # meta theme-color first so the sync theme probe can flip it to #0F1D1E before first paint
+    return meta + theme_js + style + ''.join(tags) + css + vp + early + nagi
 
 
 def write_run_local(hashes: dict):
@@ -355,7 +358,13 @@ def build():
     app_css = minify_css(r(S/'classic.css') + '\n' + r(S/'app.css') + '\n' + r(S/'bridge.css'))
     nagi_css = hdr + app_css
 
-    bundled = minify_js(pwa_js + '\n' + r(S/'garden.js') + '\n' + r(S/'koi.js') + '\n' + r(S/'app.js') + '\n' + r(S/'classic.js') + '\n' + r(S/'adapter-cpp.js'))
+    # v4.1: koi pond is deferred — not on the first-paint critical path
+    koi_js = hdr + minify_js(r(S/'koi.js'))
+    (O/'nagi-koi.js').write_text(koi_js)
+    koi_h = file_hash(O/'nagi-koi.js')
+    koi_url = qurl('/.nagi/nagi-koi.js', koi_h)
+    app_src = r(S/'app.js').replace('__NAGI_KOI_URL__', koi_url)
+    bundled = minify_js(pwa_js + '\n' + r(S/'garden.js') + '\n' + app_src + '\n' + r(S/'classic.js') + '\n' + r(S/'adapter-cpp.js'))
     nagi_js = hdr + 'if(!window.__nagiJs){window.__nagiJs=1;\n' + bundled + '\n}'
     pages_js = hdr + minify_js(pwa_js + '\n' + r(S/'garden.js') + '\n' + r(S/'pages.js'))
 
@@ -372,7 +381,7 @@ def build():
     (O/'nagi-late.js').write_text(hdr + minify_js(late))
     (O/'nagi-boot.css').write_text(hdr + r(S/'nagi-boot.css'))
 
-    hashes = {n: file_hash(O/n) for n in ('nagi.css','nagi.js','nagi-pages.css','nagi-pages.js','nagi-early.js','nagi-late.js','nagi-boot.css','nagi-fonts-defer.css','manifest.json','icon-180.png')}
+    hashes = {n: file_hash(O/n) for n in ('nagi.css','nagi.js','nagi-pages.css','nagi-pages.js','nagi-early.js','nagi-late.js','nagi-boot.css','nagi-koi.js','nagi-fonts-defer.css','manifest.json','icon-180.png')}
     _, lh = launch_catalog()
     hashes.update({'launch/'+k: v for k,v in lh.items()})
     write_run_local(hashes)

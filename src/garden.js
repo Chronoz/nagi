@@ -157,34 +157,5 @@ function bulge(p,frac,mx,outer){frac=frac==null?.05:frac;mx=mx||11;var o=[],n=p.
     var sg=((Math.round(Math.atan2(uy,ux)*7)%2)?1:-1),amt=Math.min(mx,l*frac)*sg;var m=[(a[0]+b[0])/2-uy*amt,(a[1]+b[1])/2+ux*amt];m.m=1;o.push(m)}
   return o}
 
-/* Remove the axis-aligned bottom-right box (x>=x0 && y>=y0) from a polygon,
-   leaving an L-shaped bound so a reserved corner stays empty. */
-function cutBR(p,x0,y0){
-  if(!p||p.length<3)return p||[];
-  function inR(q){return q[0]>x0+1e-6&&q[1]>y0+1e-6}
-  function hits(a,b){
-    var o=[],dx=b[0]-a[0],dy=b[1]-a[1];
-    if(Math.abs(dx)>1e-12){var t=(x0-a[0])/dx;if(t>1e-9&&t<1-1e-9){var y=a[1]+t*dy;if(y>=y0-1e-6)o.push({t:t,p:[x0,y],s:'v'})}}
-    if(Math.abs(dy)>1e-12){var t2=(y0-a[1])/dy;if(t2>1e-9&&t2<1-1e-9){var x=a[0]+t2*dx;if(x>=x0-1e-6)o.push({t:t2,p:[x,y0],s:'h'})}}
-    o.sort(function(u,v){return u.t-v.t});return o;
-  }
-  var n=p.length,st0=-1;
-  for(var i=0;i<n;i++)if(!inR(p[i])){st0=i;break}
-  if(st0<0)return [];
-  p=p.slice(st0).concat(p.slice(0,st0));
-  var o=[],side=null;
-  for(var i=0;i<n;i++){
-    var a=p[i],b=p[(i+1)%n];
-    if(!inR(a))o.push(a);
-    var hs=hits(a,b);
-    for(var k=0;k<hs.length;k++){
-      if(side&&side!==hs[k].s)o.push([x0,y0]);
-      o.push(hs[k].p);side=hs[k].s;
-    }
-    if(hs.length&&!inR(b))side=null;
-  }
-  return dedupe(o,.01);
-}
-
 window.NagiGarden={bulge:bulge,swatch:swatch,layout:layout,inset:inset,path:path,prad:prad,rings:rings,contours:contours,pole:pole,area:area,centroid:centroid,bbox:bbox,roundRect:roundRect,hash:hash,rng:rng,inside:inside ,cut:cut,clip:clip};
 })();

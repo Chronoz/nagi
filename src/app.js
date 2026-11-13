@@ -197,6 +197,7 @@ function restoreFolder(path,cached){
 function revalidate(path){load(path,function(d){if(st.path!==path)return;if(listingSig(d)===listingSig(st.data)){var e=memGet(path);if(e)e.t=Date.now();return}var sc=snapScroll();st.data=d;render(false);applyScroll(sc);memSave()},true)}
 function go(path,push,how){
   if(path==st.path&&st.data){return}
+  thFlush();thDrop($.zoom);thDrop($.chk);var _lst=$.stage&&$.stage.querySelector('.lst');thDrop(_lst);
   memSave();
   if(st.lb)lbClose(true);if(st.sheet)closeSheet(true);
   st.sel=[];
@@ -489,7 +490,8 @@ function fieldLayout(it,W,H,M0,hole,mob){var R=mob?22:34,iter=it.length>40?48:64
   if(w2<want*.9){var f=Math.max(.45,w2/want),nx=X-(X-(M0+cutX*.7))*f;bp=[[Math.max(nx,M0+cutX*.7),Y+lead],[Math.max(nx,M0+cutX*.7)+bw*.2*f,Y+lead*.28],[X,Y],[X,B],[Math.max(nx-cutX*.6*f,M0+cutX*.7),B]]}
   var c1=G.layout(one,G.roundRect(X,M0,W-M0-X,H-2*M0,R),{seed:st.path,iter:iter,corner:[X+2,M0+2]}),c2=G.layout(two,bp,{seed:st.path+'|band',iter:iter});
   st.band={x0:M0,y0:Y,x1:X,y1:B,poly:bp};st.hole2=[-1e4,-1e4,X,Y];return c1.concat(c2)}
-function pondUp(cells){if(!window.NagiKoi)return;var best=null;cells.forEach(function(c){if(c.d&&c.item.free)best=c});
+function loadKoi(cb){if(window.NagiKoi){if(cb)cb();return}if(window.__nagiKoiLoading){if(cb)(window.__nagiKoiCbs=window.__nagiKoiCbs||[]).push(cb);return}window.__nagiKoiLoading=1;var s=document.createElement('script');s.src='__NAGI_KOI_URL__';s.async=true;var n=document.currentScript&&document.currentScript.nonce||(document.querySelector('script[nonce]')||{}).nonce;if(n)s.setAttribute('nonce',n);s.onload=function(){window.__nagiKoiLoading=0;var q=window.__nagiKoiCbs||[];window.__nagiKoiCbs=null;q.forEach(function(f){try{f()}catch(e){}});if(cb)cb();if(st.view=='garden'&&st.cells)pondUp(st.cells)};s.onerror=function(){window.__nagiKoiLoading=0};(document.head||document.documentElement).appendChild(s)}
+function pondUp(cells){if(!window.NagiKoi){loadKoi();return}var best=null;cells.forEach(function(c){if(c.d&&c.item.free)best=c});
   if(!best||best.area<9000||best.pr<34||root.classList.contains('off')){NagiKoi.hide();st.pond=null;return}
   st.pond=best;var gfree=$.zoom.querySelector('.cell[data-i="'+best.idx+'"]');if(gfree)gfree.classList.add('pondc');var pts=best.pb.map(function(v){return [v[0],v[1]]});NagiKoi.show($.stage,{poly:pts},{d:best.d,key:st.path+'|'+best.item.path,before:$.lbs,theme:root,interactive:true,avoid:best.c?[best.c[0],best.c[1],Math.min(70,Math.max(34,best.pr*.42))]:null});
   [].forEach.call($.lbs.querySelectorAll('.lb'),function(l){l.classList.toggle('pond',+l.dataset.i===best.idx)})}
@@ -645,18 +647,27 @@ function showRest(){
   chk.scrollTop=0;
 }
 function setView(v){st.view=v;localStorage.nagi_view=v;render(true)}
+/* v4.1: at most TH_MAX thumbnail requests in flight; a new folder flushes the rest. */
+var TH_MAX=4,thQ=[],thN=0,thGen=0;
+function thFlush(){thGen++;thQ.length=0}
+function thDrop(el){if(!el)return;if(el._thIO){try{el._thIO.disconnect()}catch(e){}el._thIO=null}}
+function thPump(){while(thN<TH_MAX&&thQ.length){var fn=thQ.shift();thN++;(function(f){var once=0;f(function(){if(once)return;once=1;thN--;thPump()})})(fn)}}
+function thEnqueue(run){var g=thGen;thQ.push(function(done){if(g!==thGen){done();return}run(done)});thPump()}
+
 function bindThumbs(rootEl,opt){if(!rootEl)return;
   if(rootEl._thIO){try{rootEl._thIO.disconnect()}catch(e){}rootEl._thIO=null}
   var nodes=rootEl.querySelectorAll?rootEl.querySelectorAll('[data-th]'):[];
   if(!nodes.length)return;
   function load(el){if(el.dataset.thOn)return;el.dataset.thOn='1';var u=el.getAttribute('data-th');if(!u)return;
+    thEnqueue(function(done){
     function ok(url){
-      if(el.tagName==='image'||el.tagName==='IMAGE'){el.setAttribute('href',url);el.setAttributeNS('http://www.w3.org/1999/xlink','href',url);el.classList.add('on')}
-      else if(el.tagName==='IMG'){el.decoding='async';el.onload=function(){el.classList.add('on')};el.onerror=fail;el.src=url}
-      else{var im=el.querySelector('img');if(im){im.decoding='async';im.onload=function(){el.classList.add('on')};im.onerror=function(){if(/[?&]th=w/.test(im.src||u)){im.onerror=null;im.src=(im.getAttribute('src')||u).replace('th=w','th=j')}else el.classList.add('miss')};im.src=url}else el.classList.add('on')}}
-    function fail(){if(/[?&]th=w/.test(u)&&!el.dataset.thJ){el.dataset.thJ='1';u=u.replace('th=w','th=j');el.dataset.thOn='';ok(u);return}
-      el.classList.add('miss');var i=el.parentNode&&el.parentNode.dataset&&el.parentNode.dataset.i,l=i!=null&&$.lbs?$.lbs.querySelector('.lb[data-i="'+i+'"]'):null;if(l)l.classList.remove('ph')}
-    if(A.thumbOk)A.thumbOk(u).then(function(src){if(src)ok(src);else fail()},fail);else ok(u)}
+      function painted(){el.classList.add('on');done()}
+      if(el.tagName==='image'||el.tagName==='IMAGE'){var pr=new Image();pr.onload=function(){el.setAttribute('href',url);el.setAttributeNS('http://www.w3.org/1999/xlink','href',url);painted()};pr.onerror=fail;pr.src=url}
+      else if(el.tagName==='IMG'){el.decoding='async';el.onload=painted;el.onerror=fail;el.src=url}
+      else{var im=el.querySelector('img');if(im){im.decoding='async';im.onload=painted;im.onerror=function(){if(/[?&]th=w/.test(im.src||u)){im.onerror=null;im.src=(im.getAttribute('src')||u).replace('th=w','th=j')}else{el.classList.add('miss');done()}};im.src=url}else painted()}}
+    function fail(){if(/[?&]th=w/.test(u)&&!el.dataset.thJ){el.dataset.thJ='1';u=u.replace('th=w','th=j');ok(u);return}
+      el.classList.add('miss');var i=el.parentNode&&el.parentNode.dataset&&el.parentNode.dataset.i,l=i!=null&&$.lbs?$.lbs.querySelector('.lb[data-i="'+i+'"]'):null;if(l)l.classList.remove('ph');done()}
+    if(A.thumbOk)A.thumbOk(u).then(function(src){if(src)ok(src);else fail()},fail);else ok(u)})}
   if(typeof IntersectionObserver!=='function'){[].forEach.call(nodes,load);return}
   var io=new IntersectionObserver(function(ents){ents.forEach(function(en){if(en.isIntersecting){io.unobserve(en.target);load(en.target)}})},{root:(opt&&opt.root)||null,rootMargin:'120px',threshold:0.01});
   rootEl._thIO=io;

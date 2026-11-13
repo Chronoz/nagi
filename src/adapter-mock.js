@@ -107,7 +107,7 @@ function run(){if(run.t)return;run.t=setInterval(function(){var act=ups.filter(f
   if(!act.length){clearInterval(run.t);run.t=null;return}
   act.forEach(function(u){var sp=38*MB*(.8+R()*.4),inc=sp*.25/u.size*100;u.pct=Math.min(100,u.pct+Math.max(inc,1.2));u.speed=(sp/MB).toFixed(1)+' MB/s';var left=(100-u.pct)/100*u.size/sp;u.eta=left>1?Math.ceil(left)+'s':'';if(u.pct>=100){u.state='ok';file(u.dir,u.name,u.size,{},Date.now()/1000);total('/')}})},250)}
 function auto(){var h=new Date().getHours();return h>=17||h<6?'yugure':'paper'}
-function apply(){var t=A.theme();if(t=='sky')t=auto();document.documentElement.className=(t=='yugure'?'fz f z':'fy f y')+' nagi mock'}
+function apply(){var t=A.theme();if(t=='sky')t=auto();var h=document.documentElement,c=t=='yugure'?'fz f z':'fy f y';['fz','fy','z','y'].forEach(function(x){h.classList.remove(x)});c.split(/\s+/).forEach(function(x){if(x)h.classList.add(x)});h.classList.add('nagi','mock');if(t=='yugure')h.classList.add('nagi-dark');else h.classList.remove('nagi-dark')}
 apply();
 window.NagiMock=A;
 })();

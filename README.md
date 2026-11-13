@@ -76,8 +76,8 @@ copyparty -p 3979 -i 127.0.0.1 \
   -v ./nagi/theme:/.nagi:r \
   --themes 12 --theme 11 --u2j 4 --md-hist v --rw-edit md,txt \
   --css-browser '/.nagi/nagi-boot.css?nagi=4aa84c116d&cache=31536000' \
-  --js-browser  '/.nagi/nagi-late.js?nagi=6266fec95a&cache=31536000' \
-  --js-other    '/.nagi/nagi-pages.js?nagi=de77b2215d&cache=31536000' \
+  --js-browser  '/.nagi/nagi-late.js?nagi=4b7d437385&cache=31536000' \
+  --js-other    '/.nagi/nagi-pages.js?nagi=221bdcb2f2&cache=31536000' \
   --html-head-s '…see examples/run-local.sh…' \
   --favico "凪 17282B EEE5D1" --no-robots
 ```
@@ -85,6 +85,8 @@ copyparty -p 3979 -i 127.0.0.1 \
 Then open <http://127.0.0.1:3979/>.
 
 The `--html-head-s` value is too long to paste here (it carries the sand splash, the iOS launch images, the first-paint CSS, and deferred `nagi.js`). Copy the full flag from [`examples/run-local.sh`](examples/run-local.sh) or [`examples/copyparty.conf`](examples/copyparty.conf) — `src/build.py` writes it on every rebuild. `--css-browser` points at a tiny `nagi-boot.css` stub; the real `nagi.css` is loaded from the head, non-blocking, so first paint is not held up.
+
+Copyparty 1.20.26 will serve a precompressed `.gz` sibling with `Content-Encoding: gzip` only for its own `/.cpr/` UI files — not for volume files, so not for anything under `/.nagi/` (including `--css-browser` and `--js-browser`). There is no flag to turn that on for a volume, and Brotli support was removed from copyparty in 2024. Nagi therefore ships readable source in `src/` and a terser-minified build in `theme/`; put a reverse proxy in front if you want gzip on the wire. The koi pond script (`nagi-koi.js`) is loaded after the garden has painted, not on the first-paint path.
 
 What each flag does:
 
@@ -118,8 +120,8 @@ Prefer a config file? See [`examples/copyparty.conf`](examples/copyparty.conf), 
   md-hist: v
   rw-edit: md,txt
   css-browser: /.nagi/nagi-boot.css?nagi=4aa84c116d&cache=31536000
-  js-browser: /.nagi/nagi-late.js?nagi=6266fec95a&cache=31536000
-  js-other: /.nagi/nagi-pages.js?nagi=de77b2215d&cache=31536000
+  js-browser: /.nagi/nagi-late.js?nagi=4b7d437385&cache=31536000
+  js-other: /.nagi/nagi-pages.js?nagi=221bdcb2f2&cache=31536000
   html-head-s: <link rel="stylesheet" href="/.nagi/nagi-pages.css?nagi=5c996510eb&cache=31536000"> …
 
 [/.nagi]
