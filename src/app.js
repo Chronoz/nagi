@@ -466,24 +466,71 @@ function clipCells(cells,slot,gap){
     return cell;
   }).filter(function(cell){return !cell.item||cell.item.more||(cell.area||0)>4});
 }
+/* v3z1: a low, flat river pebble in the same drawing vocabulary as the
+   garden stones (harmonic outline, then the usual bulge + path rounding
+   and inset rake rings). Phases are fixed constants, not Math.random,
+   so the shape is stable across renders and folders. */
 function morePoly(slot,mob){
-  var pad=3,s=slot.s-pad*2,r=s*(mob?.32:.28);
-  var p=G.roundRect(slot.x0+pad,slot.y0+pad,s,s,r);
-  return G.bulge(p,.03,Math.max(4,s*.05),function(){return false})||p;
+  /* Fill most of the reserved corner — a low, slightly squat pebble, same
+     visual weight as the old square patch, but an irregular river-stone
+     outline. Soft harmonics (in the sliver vocabulary), no pinched waist. */
+  var pad=mob?3:4, aw=slot.s-pad*2, ah=slot.s-pad*2;
+  if(aw<44||ah<44){aw=Math.max(44,aw);ah=Math.max(44,ah)}
+  var cx=slot.x0+pad+aw*.54, cy=slot.y0+pad+ah*.55;
+  var rx=aw*.50, ry=ah*.455, rot=-0.17, n=12, p=[], i;
+  for(i=0;i<n;i++){
+    var a=i/n*Math.PI*2;
+    var h=1+.09*Math.sin(2*a+0.55)+.07*Math.cos(3*a+2.05)+.035*Math.sin(5*a+1.1)+.018*Math.cos(4*a+1.7);
+    var x=Math.cos(a)*rx*h, y=Math.sin(a)*ry*h;
+    var co=Math.cos(rot), si=Math.sin(rot);
+    p.push([cx+x*co-y*si, cy+x*si+y*co]);
+  }
+  var bb=G.bbox(p), pw=bb[2]-bb[0], ph=bb[3]-bb[1];
+  var fit=Math.min((slot.x1-slot.x0-pad*2)/pw,(slot.y1-slot.y0-pad*2)/ph,1);
+  if(fit<0.999){
+    var cc=[(bb[0]+bb[2])/2,(bb[1]+bb[3])/2];
+    /* after shrinking, nudge back toward the corner (thumb reach) */
+    var nx=slot.x1-pad-(bb[2]-cc[0])*fit, ny=slot.y1-pad-(bb[3]-cc[1])*fit;
+    p=p.map(function(q){return [nx+(q[0]-cc[0])*fit,ny+(q[1]-cc[1])*fit]});
+  }
+  return p;
 }
-function placeMore(cells,rest,slot,mob){
+/* Rake lines: true inward offsets of the pebble (same as G.rings), with a
+   quiet, seeded ripple so they feel hand-raked rather than compass-drawn.
+   The phase is shared across rings so the grooves stay roughly parallel. */
+function rakeRings(p,step,maxn,amt){
+  var Rs=G.rings(p,step,0,maxn), c=G.centroid(p), a0=0.62, n=Rs.rings.length;
+  return Rs.rings.map(function(q,j){
+    var k=(amt==null?.032:amt)*(1-j/(n+1.5));
+    return q.map(function(pt){
+      var a=Math.atan2(pt[1]-c[1],pt[0]-c[0]);
+      var f=1+k*Math.sin(3*a+a0)+k*.42*Math.cos(5*a+a0*1.35);
+      return [c[0]+(pt[0]-c[0])*f,c[1]+(pt[1]-c[1])*f];
+    });
+  });
+}
+function moreBox(poly){
+  if(!poly||poly.length<3)return null;
+  var bb=G.bbox(poly);
+  return {x0:bb[0],y0:bb[1],x1:bb[2],y1:bb[3],s:Math.max(bb[2]-bb[0],bb[3]-bb[1])};
+}
+function placeMore(cells,rest,slot,mob,mpoly){
   st.moreSlot=slot||null;
   cells=clipCells(cells||[],slot,mob?16:20);
   if(!rest||!slot)return cells;
-  var poly=morePoly(slot,mob);
-  if(!poly||poly.length<3)poly=G.roundRect(slot.x0,slot.y0,slot.s,slot.s,slot.s*.28);
-  cells.push({item:{key:'more',more:rest},poly:poly,area:Math.abs(G.area(poly)),c:[(slot.x0+slot.x1)/2,(slot.y0+slot.y1)/2]});
+  var poly=(mpoly&&mpoly.length>=3)?mpoly:(slot.poly&&slot.poly.length>=3?slot.poly:null);
+  if(!poly||poly.length<3)return cells;
+  var bb=G.bbox(poly);
+  cells.push({item:{key:'more',more:rest},poly:poly,area:Math.abs(G.area(poly)),c:[(bb[0]+bb[2])/2,(bb[1]+bb[3])/2]});
   return cells;
 }
 function fieldLayout(it,W,H,M0,hole,mob){var R=mob?22:34,iter=it.length>40?80:120;st.band=null;st.moreSlot=null;
-  var rest=st.moreRest||0,slot=rest?moreSlot(W,H,M0,mob):null;
+  var rest=st.moreRest||0,slot0=rest?moreSlot(W,H,M0,mob):null,mpoly=slot0?morePoly(slot0,mob):null;
+  /* L-shaped clearance follows the pebble's box, not a larger unused square. */
+  var slot=mpoly?moreBox(mpoly):slot0;
+  if(slot&&slot0){slot.s=slot0.s;slot.poly=mpoly}
   var g=mob?16:20;
-  if(!hole||hole[3]>H-60){var x0=hole?hole[2]:M0;return placeMore(G.layout(it,holdBR(G.roundRect(x0,M0,W-M0-x0,H-2*M0,R),slot,g),{seed:st.path,iter:iter,corner:[x0+2,M0+2]}),rest,slot,mob)}
+  if(!hole||hole[3]>H-60){var x0=hole?hole[2]:M0;return placeMore(G.layout(it,holdBR(G.roundRect(x0,M0,W-M0-x0,H-2*M0,R),slot,g),{seed:st.path,iter:iter,corner:[x0+2,M0+2]}),rest,slot,mob,mpoly)}
   var X=hole[2],Y=hole[3],B=H-M0,bh=B-Y,bw=X-M0;
   // the strip under the column: real stones sit in a fan-shaped patch toward the field (top edge rising to
   // the right, left edge leaning in); the rest is negative space with a few ghost pebbles, sparser to the left.
@@ -493,12 +540,12 @@ function fieldLayout(it,W,H,M0,hole,mob){var R=mob?22:34,iter=it.length>40?80:12
   var big=it.slice().sort(function(a,b){return b.weight-a.weight})[0],cand=it.filter(function(o){return !o.free&&o!==big}).sort(function(a,b){return (G.hash(a.key+'|b')%997)-(G.hash(b.key+'|b')%997)});
   var two=[],w2=0;cand.forEach(function(o){if(w2+o.weight<=want*1.12){two.push(o);w2+=o.weight}});
   if(!two.length&&cand.length>=2){var sm=cand.slice().sort(function(a,b){return a.weight-b.weight})[0];two.push(sm);w2=sm.weight}
-  if(!two.length||it.length-two.length<2||bh<80){return placeMore(G.layout(it,holdBR(G.roundRect(X,M0,W-M0-X,H-2*M0,R),slot,g),{seed:st.path,iter:iter,corner:[X+2,M0+2]}),rest,slot,mob)}
+  if(!two.length||it.length-two.length<2||bh<80){return placeMore(G.layout(it,holdBR(G.roundRect(X,M0,W-M0-X,H-2*M0,R),slot,g),{seed:st.path,iter:iter,corner:[X+2,M0+2]}),rest,slot,mob,mpoly)}
   var one=it.filter(function(o){return two.indexOf(o)<0});
   // keep sizes honest: if the band stones weigh less than their share, pull the patch's left edge in
   if(w2<want*.9){var f=Math.max(.45,w2/want),nx=X-(X-(M0+cutX*.7))*f;bp=[[Math.max(nx,M0+cutX*.7),Y+lead],[Math.max(nx,M0+cutX*.7)+bw*.2*f,Y+lead*.28],[X,Y],[X,B],[Math.max(nx-cutX*.6*f,M0+cutX*.7),B]]}
   var c1=G.layout(one,holdBR(G.roundRect(X,M0,W-M0-X,H-2*M0,R),slot,g),{seed:st.path,iter:iter,corner:[X+2,M0+2]}),c2=G.layout(two,bp,{seed:st.path+'|band',iter:iter});
-  st.band={x0:M0,y0:Y,x1:X,y1:B,poly:bp};st.hole2=[-1e4,-1e4,X,Y];return placeMore(c1.concat(c2),rest,slot,mob)}
+  st.band={x0:M0,y0:Y,x1:X,y1:B,poly:bp};st.hole2=[-1e4,-1e4,X,Y];return placeMore(c1.concat(c2),rest,slot,mob,mpoly)}
 // koi pond in the Free pebble (pinned in the corner): tap the water to scatter the koi; it never navigates
 function pondUp(cells){if(!window.NagiKoi)return;var best=null;cells.forEach(function(c){if(c.d&&c.item.free)best=c});
   if(!best||best.area<9000||best.pr<34||root.classList.contains('off')){NagiKoi.hide();st.pond=null;return}
@@ -598,7 +645,7 @@ function render(anim){if(!st.data)return;if(!st.data.all)st.data.all=st.data.ite
     svg+='<g class="'+cls+'" data-i="'+i+'" style="animation-delay:'+(anim?Math.min(i*16,420):0)+'ms"><path class="f" d="'+d+'"/>';
     if(x&&!x.isDir&&(x.type=='image'||x.type=='video')&&A.thumb&&c.area>2200&&!c.sliver&&pl1.r>=22){var th=A.thumb(x);if(th){var b3=G.bbox(poly),cid='cp'+i+'_'+(G.hash(st.path)%9999);svg+='<clipPath id="'+cid+'"><path d="'+d+'"/></clipPath><image class="th" data-th="'+esc(th)+'" x="'+b3[0].toFixed(1)+'" y="'+b3[1].toFixed(1)+'" width="'+(b3[2]-b3[0]).toFixed(1)+'" height="'+(b3[3]-b3[1]).toFixed(1)+'" preserveAspectRatio="xMidYMid slice" clip-path="url(#'+cid+')"/>';c.thumb=1}}
     var core=null;
-    if(o.more){var Rs=G.rings(pb.map(function(v){return [v[0],v[1]]}),mob?7:9,0,9);Rs.rings.forEach(function(q,j){svg+='<path class="sand" d="'+G.path(q,Math.max(2,Math.min(rad-(j+1)*5,G.prad(q,hk))))+'"/>'})}
+    if(o.more){var rings=rakeRings(pb.map(function(v){return [v[0],v[1]]}),mob?4.4:5.2,10,mob?.028:.024);rings.forEach(function(q,j){svg+='<path class="sand" d="'+G.path(q,Math.max(2,Math.min(rad-(j+1)*3.6,G.prad(q,hk))))+'"/>'})}
     else if(i===sandI&&!c.sliver){var Rs=G.rings(pb.map(function(v){return [v[0],v[1]]}),mob?5.5:7,0,40);Rs.rings.forEach(function(q,j){svg+='<path class="sand" d="'+G.path(q,Math.max(2,Math.min(rad-(j+1)*4,G.prad(q,hk))))+'"/>'})}
     if(o.free&&window.NagiKoi&&pl1.r>=34&&ar>=9000){}
     else if(o.free){var pbx=pb.map(function(v){return [v[0],v[1]]}),R=G.rings(pbx,mob?6:8.5,0,64),st0=mob?6:8.5;R.rings.forEach(function(q,j){svg+='<path class="ring" d="'+G.path(q,Math.max(2,Math.min(rad-(j+1)*st0*.55,G.prad(q,hk))))+'"/>'});core=R.core}
