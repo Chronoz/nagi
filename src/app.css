@@ -400,6 +400,7 @@ html.fz #nagi svg.g .cell:not(.free):hover .f{filter:drop-shadow(0 6px 10px rgba
 #nagi .stage svg.g .cell{pointer-events:auto}
 #nagi .stage svg.g .cell.pondc{pointer-events:none}
 #nagi .stage svg.g .cell.pondc .f{fill:none!important;stroke:none!important}
+#nagi .stage svg.g .cell.pondc .ring,#nagi .stage svg.g .cell.pondc .sand{fill:none!important;stroke:none!important;display:none}
 
 /* v3g: rows carry a type icon; folders first, files grouped by type with quiet labels */
 #nagi .row{grid-template-columns:18px 28px 1fr auto;gap:10px}

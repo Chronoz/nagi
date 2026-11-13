@@ -493,7 +493,7 @@ function fieldLayout(it,W,H,M0,hole,mob){var R=mob?22:34,iter=it.length>40?48:64
 function loadKoi(cb){if(window.NagiKoi){if(cb)cb();return}if(window.__nagiKoiLoading){if(cb)(window.__nagiKoiCbs=window.__nagiKoiCbs||[]).push(cb);return}window.__nagiKoiLoading=1;var s=document.createElement('script');s.src='__NAGI_KOI_URL__';s.async=true;var n=document.currentScript&&document.currentScript.nonce||(document.querySelector('script[nonce]')||{}).nonce;if(n)s.setAttribute('nonce',n);s.onload=function(){window.__nagiKoiLoading=0;var q=window.__nagiKoiCbs||[];window.__nagiKoiCbs=null;q.forEach(function(f){try{f()}catch(e){}});if(cb)cb();if(st.view=='garden'&&st.cells)pondUp(st.cells)};s.onerror=function(){window.__nagiKoiLoading=0};(document.head||document.documentElement).appendChild(s)}
 function pondUp(cells){if(!window.NagiKoi){loadKoi();return}var best=null;cells.forEach(function(c){if(c.d&&c.item.free)best=c});
   if(!best||best.area<9000||best.pr<34||root.classList.contains('off')){NagiKoi.hide();st.pond=null;return}
-  st.pond=best;var gfree=$.zoom.querySelector('.cell[data-i="'+best.idx+'"]');if(gfree)gfree.classList.add('pondc');var pts=best.pb.map(function(v){return [v[0],v[1]]});NagiKoi.show($.stage,{poly:pts},{d:best.d,key:st.path+'|'+best.item.path,before:$.lbs,theme:root,interactive:true,avoid:best.c?[best.c[0],best.c[1],Math.min(70,Math.max(34,best.pr*.42))]:null});
+  st.pond=best;var gfree=$.zoom.querySelector('.cell[data-i="'+best.idx+'"]');if(gfree){gfree.classList.add('pondc');[].forEach.call(gfree.querySelectorAll('path.ring, path.sand'),function(p){p.remove()})}var pts=best.pb.map(function(v){return [v[0],v[1]]});NagiKoi.show($.stage,{poly:pts},{d:best.d,key:st.path+'|'+best.item.path,before:$.lbs,theme:root,interactive:true,avoid:best.c?[best.c[0],best.c[1],Math.min(70,Math.max(34,best.pr*.42))]:null});
   [].forEach.call($.lbs.querySelectorAll('.lb'),function(l){l.classList.toggle('pond',+l.dataset.i===best.idx)})}
 function segD(p,a,b){var dx=b[0]-a[0],dy=b[1]-a[1],t=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/(dx*dx+dy*dy||1)));return Math.hypot(p[0]-a[0]-t*dx,p[1]-a[1]-t*dy)}
 function polyD(p,P){var d=1e9;for(var i=0;i<P.length;i++)d=Math.min(d,segD(p,P[i],P[(i+1)%P.length]));return G.inside(P,p[0],p[1])?-d:d}
@@ -590,8 +590,12 @@ function render(anim){if(!st.data)return;if(!st.data.all)st.data.all=st.data.ite
     var core=null;
     if(o.more){var rings=rakeRings(pb.map(function(v){return [v[0],v[1]]}),mob?4.4:5.2,10,mob?.028:.024);rings.forEach(function(q,j){svg+='<path class="sand" d="'+G.path(q,Math.max(2,Math.min(rad-(j+1)*3.6,G.prad(q,hk))))+'"/>'})}
     else if(i===sandI&&!c.sliver){var Rs=G.rings(pb.map(function(v){return [v[0],v[1]]}),mob?5.5:7,0,40);Rs.rings.forEach(function(q,j){svg+='<path class="sand" d="'+G.path(q,Math.max(2,Math.min(rad-(j+1)*4,G.prad(q,hk))))+'"/>'})}
-    if(o.free&&window.NagiKoi&&pl1.r>=34&&ar>=9000){}
-    else if(o.free){var pbx=pb.map(function(v){return [v[0],v[1]]}),R=G.rings(pbx,mob?6:8.5,0,64),st0=mob?6:8.5;R.rings.forEach(function(q,j){svg+='<path class="ring" d="'+G.path(q,Math.max(2,Math.min(rad-(j+1)*st0*.55,G.prad(q,hk))))+'"/>'});core=R.core}
+    /* Pond-sized free space: the koi pond lives here (it may still be
+       loading — v4.1 defers nagi-koi.js). Never paint fallback rake
+       rings into this cell; they sit in the SVG above the water and
+       pondc only clears .f, so they would stay visible "for no reason".
+       A smaller free pebble still gets the quiet contour rings. */
+    if(o.free&&!(pl1.r>=34&&ar>=9000)){var pbx=pb.map(function(v){return [v[0],v[1]]}),R=G.rings(pbx,mob?6:8.5,0,64),st0=mob?6:8.5;R.rings.forEach(function(q,j){svg+='<path class="ring" d="'+G.path(q,Math.max(2,Math.min(rad-(j+1)*st0*.55,G.prad(q,hk))))+'"/>'});core=R.core}
     if(o.up){var R2=G.rings(poly,6,0,40),k=Math.round(R2.rings.length*(o.up.pct||0)/100);svg+='<path class="rim" d="'+d+'"/>';R2.rings.forEach(function(q,j){svg+='<path class="ring'+(j<k?'':' todo')+'" d="'+G.path(G.bulge(q),Math.min(rad,G.prad(q,hk)))+'"/>'})}
     svg+='</g>';
     // label at the stone's pole, small and centred (Kanso)
