@@ -125,12 +125,13 @@ var MEM={},MEMN=24,navStack=[],ovPushed=false;
 function memKey(p){return (p||'/')+'\0'+(A.dots&&A.dots()?'1':'0')+'\0'+(A.user||'*')}
 function snapScroll(){var lst=$.stage&&$.stage.querySelector('.lst');return {bd:$.bd&&$.bd.scrollTop||0,chk:$.chk&&$.chk.scrollTop||0,lst:lst&&lst.scrollTop||0}}
 function applyScroll(sc){if(!sc)return;function put(){if($.bd)$.bd.scrollTop=sc.bd||0;if($.chk)$.chk.scrollTop=sc.chk||0;var lst=$.stage&&$.stage.querySelector('.lst');if(lst)lst.scrollTop=sc.lst||0}put();requestAnimationFrame(put)}
-function sizeKey(){return innerWidth+'x'+innerHeight+'@'+(innerWidth<=760?'m':'d')}
+function gardenCap(){return innerWidth<=760?6:20}
+function sizeKey(){return innerWidth+'x'+innerHeight+'@'+(innerWidth<=760?'m':'d')+'c'+gardenCap()}
 function memSave(){
   if(!st.path||!st.data)return;
   if(st.view=='garden'&&$.zoom)[].forEach.call($.zoom.querySelectorAll('.cell.in'),function(g){g.classList.remove('in')});
   var garden=st.view=='garden'&&$.zoom?{zoom:$.zoom.innerHTML,lbs:$.lbs?$.lbs.innerHTML:'',cells:st.cells,band:st.band,hole2:st.hole2}:null;
-  MEM[memKey(st.path)]={t:Date.now(),data:st.data,view:st.view,scroll:snapScroll(),acct:A.user||'*',sk:sizeKey(),garden:garden};
+  MEM[memKey(st.path)]={t:Date.now(),data:st.data,view:st.view,scroll:snapScroll(),acct:A.user||'*',sk:sizeKey(),gc:gardenCap(),garden:garden};
   var ks=Object.keys(MEM);if(ks.length>MEMN){ks.sort(function(a,b){return MEM[a].t-MEM[b].t});for(var i=0;i<ks.length-MEMN;i++)delete MEM[ks[i]]}
   memPersist();
 }
@@ -138,10 +139,10 @@ function memPersist(){
   try{
     var k=st.path&&memKey(st.path),e=k&&MEM[k];
     if(!e||!e.data)return;
-    var g=e.garden,dump={k:k,path:st.path,t:e.t,data:e.data,view:e.view,scroll:e.scroll,acct:e.acct,sk:e.sk,
+    var g=e.garden,dump={k:k,path:st.path,t:e.t,data:e.data,view:e.view,scroll:e.scroll,acct:e.acct,sk:e.sk,gc:e.gc!=null?e.gc:gardenCap(),
       garden:g&&{zoom:g.zoom,lbs:g.lbs,band:g.band,hole2:g.hole2,cells:g.cells}};
     localStorage.setItem('nagi_mem',JSON.stringify(dump));
-  }catch(err){try{var e2=MEM[memKey(st.path)];if(e2)localStorage.setItem('nagi_mem',JSON.stringify({k:memKey(st.path),path:st.path,t:e2.t,data:e2.data,view:e2.view,scroll:e2.scroll,acct:e2.acct,sk:e2.sk,garden:e2.garden&&{zoom:e2.garden.zoom,lbs:e2.garden.lbs}}))}catch(e3){}}
+  }catch(err){try{var e2=MEM[memKey(st.path)];if(e2)localStorage.setItem('nagi_mem',JSON.stringify({k:memKey(st.path),path:st.path,t:e2.t,data:e2.data,view:e2.view,scroll:e2.scroll,acct:e2.acct,sk:e2.sk,gc:e2.gc!=null?e2.gc:gardenCap(),garden:e2.garden&&{zoom:e2.garden.zoom,lbs:e2.garden.lbs}}))}catch(e3){}}
 }
 function memHydrate(){
   try{
@@ -174,7 +175,7 @@ function restoreFolder(path,cached){
   if(window.NagiKoi)NagiKoi.reset();$.lbs.style.opacity='';
   try{void $.zoom.getBoundingClientRect()}catch(e){}$.zoom.style.transition='';
   var g=cached.garden;
-  if(g&&g.zoom&&cached.view==='garden'&&st.view==='garden'&&cached.sk===sizeKey()){
+  if(g&&g.zoom&&cached.view==='garden'&&st.view==='garden'&&cached.sk===sizeKey()&&cached.gc===gardenCap()){
     if(!st.data.all)st.data.all=st.data.items;
     [].forEach.call($.gh.querySelectorAll('.seg button'),function(b){b.classList.toggle('on',b.dataset.v==st.view)});
     var nd=st.data.items.filter(function(x){return x.isDir}).length,nf=st.data.items.length-nd;$.cnt.textContent=pl(nd,'folder')+' · '+(nf==1?'1 file':nf+' files');
@@ -437,20 +438,33 @@ function toneOf(x){if(!x)return 3;if(st.age&&st.age[x.path])return st.age[x.path
 // a folder of one kind of thing: stones weather with age (newest darkest), so the field still reads
 function ageTones(list){st.age=null;var k={};list.forEach(function(x){k[x.isDir?(x.dom=='empty'?3:1):(TONE[x.type]||3)]=1});if(Object.keys(k).length>1||list.length<3)return;
   var srt=list.slice().sort(function(a,b){return (b.ts||0)-(a.ts||0)}),n=srt.length;st.age={};srt.forEach(function(x,i){st.age[x.path]=i<n/3?1:i<2*n/3?2:3})}
-function items(){var d=st.data,list=d.items.slice(),out=[],sum=0,mx=0,cap=innerWidth<=760?8:20;
-  /* v3x: at most 8 stones on a narrow screen, 20 on a wider one. Keep the
-     heaviest items (same size-weight as the garden already used; folders
-     first on a tie). v3z: when anything is hidden, a quiet "+N" sand-ring
-     is reserved in the bottom-right corner, not packed as a stone. */
+function moreWeight(stones,floor){
+  /* Desktop: a quiet corner stone, same modest share as v3z2.
+     Mobile: the +N cell should come out 3rd-largest — smaller than the
+     two biggest stones, at least as large as the rest. Take the midpoint
+     of the 2nd and 3rd stone weights (not a fixed %). A later area
+     nudge in render() confirms the rank from the final tessellation. */
+  if(innerWidth>760){var s=stones.reduce(function(a,o){return a+o.weight},0);return Math.max(s*.055,floor*5)}
+  var ws=stones.filter(function(o){return !o.free&&!o.up&&!o.more}).map(function(o){return o.weight}).sort(function(a,b){return b-a});
+  if(!ws.length)return floor*5;
+  var hi=ws.length>1?ws[1]:ws[0],lo=ws.length>2?ws[2]:hi*.85,mw=(hi+lo)/2;
+  if(hi-lo>1e-6){if(mw>=hi)mw=hi-(hi-lo)*.4;if(mw<lo)mw=lo}
+  else mw=lo;
+  return mw}
+function items(){var d=st.data,list=d.items.slice(),out=[],sum=0,mx=0,cap=gardenCap();
+  /* v3x / v4.1.4: at most 6 cells on a narrow screen (5 stones + "+N"
+     when the folder overflows; 6 or fewer items show them all, no "+N"),
+     20 on a wider one. Keep the heaviest items (same size-weight as the
+     garden already used; folders first on a tie). v3z: when anything is
+     hidden, a "+N" sand-ring cell is pinned in the bottom-right. */
   list.sort(function(a,b){var wa=Math.pow((a.size||0)+1,.62),wb=Math.pow((b.size||0)+1,.62);return (wb-wa)||((b.isDir?1:0)-(a.isDir?1:0))||(a.name||'').localeCompare(b.name||'')});
   var rest=0;if(list.length>cap){rest=list.length-(cap-1);list=list.slice(0,cap-1)}
   list.forEach(function(x){var w=Math.pow((x.size||0)+1,.62);mx=Math.max(mx,w);out.push({key:x.path,weight:w,x:x});sum+=w});
   /* v3z2: +N is a genuine cell in the tessellation, pinned to the
-     bottom-right so neighbours curve around it with the same gutter.
-     Weight is modest (a quiet corner stone) but enough for a ≥44px target. */
+     bottom-right so neighbours curve around it with the same gutter. */
   st.moreRest=rest;
   var n=out.length,floor=Math.max(sum*(n>24?.0045:.012),mx*.012,1);out.forEach(function(o){o.weight=Math.max(o.weight,floor)});sum=out.reduce(function(a,o){return a+o.weight},0);
-  if(rest){var mw=Math.max(sum*(innerWidth<=760?.09:.055),floor*5);out.push({key:'more',weight:mw,more:rest,pin:'br'});sum+=mw}
+  if(rest){var mw=moreWeight(out,floor);out.push({key:'more',weight:mw,more:rest,pin:'br'});sum+=mw}
   st.ups.filter(function(u){return u.dir==st.path&&u.state!='ok'}).forEach(function(u){if(list.some(function(x){return x.name==u.name}))return;var w=Math.max(Math.pow(u.size+1,.62),floor);out.push({key:'up:'+u.name,weight:w,up:u});sum+=w});
   if(st.path=='/'&&d.free!=null){var fw=Math.min(sum*.5,Math.max(sum*.3,Math.pow(d.free,.62)));out.push({key:'free',weight:fw||1,free:1,anchor:st.anchor})}
   return out}
@@ -561,6 +575,39 @@ function bindReadme(box){
 }
 function cancelEdit(){if(st._ed&&st._edLeave)st._edLeave()}
 
+/* Mobile: after the first pack, adjust the +N weight so its finished
+   cell area ranks 3rd among the stones — smaller than the two biggest,
+   at least as large as the rest. The pond (free) is not a stone and is
+   left out of this ranking. A short binary search, a few relayouts at
+   most; six cells pack quickly. */
+function fitMoreArea(it,cells,relayout){
+  var moreI=it.filter(function(o){return o.more})[0];if(!moreI)return cells;
+  function measure(cs){
+    var stones=cs.filter(function(c){return !c.item.more&&!c.item.free&&!c.item.up});
+    var more=cs.filter(function(c){return c.item.more})[0];
+    if(!more||stones.length<2)return null;
+    var areas=stones.map(function(c){return c.area}).sort(function(a,b){return b-a});
+    var hi=areas[1],lo=areas.length>2?areas[2]:0;
+    var stoneRank=1;stones.concat([more]).sort(function(a,b){return b.area-a.area}).forEach(function(c,i){if(c.item.more)stoneRank=i+1});
+    return {more:more,hi:hi,lo:lo,want:lo+(hi-lo)/2,area:more.area,stoneRank:stoneRank,ok:stoneRank===3&&more.area<=hi&&more.area>=lo};
+  }
+  var m=measure(cells);if(!m||m.ok)return cells;
+  var loW=moreI.weight*.12,hiW=moreI.weight*3,w=moreI.weight;
+  var best=cells,bestScore=1e15;
+  for(var k=0;k<8;k++){
+    if(m.area>m.hi){hiW=Math.min(hiW,w);w=(w+loW)/2}
+    else if(m.area<m.lo){loW=Math.max(loW,w);w=(w+hiW)/2}
+    else break;
+    if(!(hiW>loW))break;
+    moreI.weight=Math.max(w,1e-6);
+    cells=relayout();m=measure(cells);if(!m)return best;
+    var score=m.ok?0:(Math.abs(m.stoneRank-3)*1e9+Math.abs(m.area-m.want));
+    if(score<bestScore){bestScore=score;best=cells}
+    if(m.ok)return cells;
+    w=moreI.weight;
+  }
+  return best;
+}
 function render(anim){if(!st.data)return;if(!st.data.all)st.data.all=st.data.items;var actv=st.ups.filter(function(u){return u.dir==st.path&&u.state!='ok'}).map(function(u){return u.name});st.data.items=st.data.all.filter(function(x){return x.isDir||actv.indexOf(x.name)<0});$.tip.classList.remove('on');st.upSig=st.ups.filter(function(x){return x.dir==st.path&&x.state!='ok'}).map(function(x){return x.name}).join('|');ageTones(st.data.items);renderCtx();loadReadme(st.data);
   [].forEach.call($.gh.querySelectorAll('.seg button'),function(b){b.classList.toggle('on',b.dataset.v==st.view)});
   var nd=st.data.items.filter(function(x){return x.isDir}).length,nf=st.data.items.length-nd;$.cnt.textContent=pl(nd,'folder')+' · '+(nf==1?'1 file':nf+' files');
@@ -574,7 +621,9 @@ function render(anim){if(!st.data)return;if(!st.data.all)st.data.all=st.data.ite
   st.anchor=hole?[hole[2]+Math.min(260,(W-hole[2])*.28),Math.min(H*.3,hole[3]*.5)]:[W*.28,H*.26];
   var it=items();
   if(!it.length){$.zoom.innerHTML='';$.lbs.innerHTML='<div class="empty" style="left:'+(hole?hole[2]:0)+'px"><div><div class="pebble0"></div><h3>An empty clearing</h3><p class="hint">Drop files anywhere, or use Upload.</p></div></div>';st.cells=[];return}
-  st.hole2=null;var M0=mob?4:8,tL=typeof performance!="undefined"?performance.now():0,cells=fieldLayout(it,W,H,M0,hole,mob);st.cells=cells;try{performance.measure("nagi-layout","nagi-layout-start");performance.mark("nagi-layout-end")}catch(e){}
+  st.hole2=null;var M0=mob?4:8,tL=typeof performance!="undefined"?performance.now():0,cells=fieldLayout(it,W,H,M0,hole,mob);
+  if(innerWidth<=760)cells=fitMoreArea(it,cells,function(){return fieldLayout(it,W,H,M0,hole,mob)});
+  st.cells=cells;try{performance.measure("nagi-layout","nagi-layout-start");performance.mark("nagi-layout-end")}catch(e){}
   var svg='',lbs='',sandI=-1,sandA=0;cells.forEach(function(c,i){var o=c.item,x=o.x;if(st.path!='/')return;if(o.free||o.up||!x)return;if((x.type=='image'||x.type=='video')&&A.thumb)return;if(c.area>sandA){sandA=c.area;sandI=i}});
   cells.forEach(function(c,i){c.idx=i;var o=c.item,x=o.x,poly=G.inset(c.poly,gap/2);if(poly.length<3)return;
     var hz=st.hole2||hole,thr=gap/2+3,outer=function(m){if(m[0]<M0+thr||m[0]>W-M0-thr||m[1]<M0+thr||m[1]>H-M0-thr)return true;if(hz&&((Math.abs(m[0]-hz[2])<thr&&m[1]<hz[3])||(Math.abs(m[1]-hz[3])<thr&&m[0]<hz[2])))return true;if(st.band&&m[0]<st.band.x1-thr&&Math.abs(polyD(m,st.band.poly))<thr)return true;return false};
