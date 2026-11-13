@@ -18,7 +18,7 @@ Nagi is a skin for copyparty, a portable file server in one Python file. It only
 - **Checklist + list view**: grouped by type (folders, video, audio, images, docs, code, archives), with folder icons. Press `G` to switch between garden and list
 - **Instant Back**: moving between folders does not reload the page. Recent folders (the garden as you left it, and where you had scrolled) are restored at once; the listing is rechecked quietly and only redrawn if it changed. If a sheet, the image viewer or the mobile drawer is open, Back closes that first. Signing out clears this memory. Private folders are never shown to a signed-out visitor from it.
 - **A quieter garden**: a phone shows at most eight stones, a wider screen twenty. The largest items are kept (same size-weighting as before, folders first on a tie). When there are more, a quiet pebble of raked sand with a “+N” sits among the other stones in the bottom-right corner of the garden (where a thumb reaches), with the same gutter and curved neighbours as any other cell. It opens the existing drawer (the file list is already there) and leaves the garden as it is.
-- **Players**: a music player with a queue (artist/title come from tags), plus video, image lightbox and text/markdown viewers. The image viewer shows a light preview only (`?th=wf3`, never the original) and a quiet Download for the full file. On a phone, swipe left or right to move between photos (the current selection, if any; otherwise every image in the folder); on a desktop the arrow keys do the same. The next and previous previews sit in a quiet filmstrip beside the current one, already decoded, so they are on screen as you drag. After a swipe snaps (or a desktop arrow steps), the already-painted frame is kept in place; only the photo that left the screen is replaced, with no fade. Neighbouring light previews (±2 to ±3, the swipe direction first) are preloaded and decoded when the viewer opens and after every step, and a tiny garden thumb stands in blurred if the preview is still arriving; a blank is never shown; a small cache keeps them in memory, and hovering or touching a photo warms it before the viewer opens. The original is never fetched. Each viewer has a small download button next to the title. If you can write, you can Edit and Save `.md` and `.txt` notes right in the reader. Version history goes to the volume hist folder (`--md-hist v`), not next to the file
+- **Players**: a music player with a queue (artist/title come from tags), plus video, image lightbox and text/markdown viewers. The image viewer shows a light preview only (`?th=wf3`, never the original) and a quiet Download for the full file. On a phone, swipe left or right to move between photos (the current selection, if any; otherwise every image in the folder); on a desktop the arrow keys do the same. The next and previous previews sit in a quiet filmstrip beside the current one, already decoded, so they are on screen as you drag. After a swipe snaps (or a desktop arrow steps), the already-painted frame is kept in place; only the photo that left the screen is replaced, with no fade. Neighbouring light previews (±2 to ±3, the swipe direction first) are preloaded and decoded when the viewer opens and after every step, and a tiny garden thumb stands in blurred if the preview is still arriving; a blank is never shown; a small cache keeps them in memory, and hovering or touching a photo warms it before the viewer opens. The original is never fetched. Opening Nagi from the iPhone home screen shows a sand launch image (a quiet pebble with faint rake rings) instead of a white flash; the same mark is painted with the first HTML bytes and fades once the app is up. iOS only picks up those launch images if the media queries match the device exactly, and only when you add (or re-add) the site to the home screen. Each viewer has a small download button next to the title. If you can write, you can Edit and Save `.md` and `.txt` notes right in the reader. Version history goes to the volume hist folder (`--md-hist v`), not next to the file
 - **Folder notes**: a folder with a `README.md` shows a short, sanitized note at the top of the listing; tap Show more to expand. Online-only (dataless) files are skipped and never opened
 - **Undo upload**: signed-in users with write access get a quiet “Undo upload” item under More. It lists your own recent uploads, including unfinished ones, and asks before deleting (Enter confirms, Esc cancels). Guests do not see it
 - **Duplicates**: signed-in users get a quiet “Duplicates” item under More. It lists groups of files with the same contents (size and path), read-only — remove an extra copy yourself from the usual menu. Guests do not see it. The server needs a content-hash index (`-e2dsa`, and no `--no-hash`). Nagi never enables `--dedup`, which would replace copies with links.
@@ -75,14 +75,16 @@ copyparty -p 3979 -i 127.0.0.1 \
   -v /path/to/your/files:/:r:rwmda,alice \
   -v ./nagi/theme:/.nagi:r \
   --themes 12 --theme 11 --u2j 4 --md-hist v --rw-edit md,txt \
-  --css-browser '/.nagi/nagi.css?nagi=19baa4b577&cache=31536000' \
-  --js-browser  '/.nagi/nagi-late.js?nagi=07136a3be5&cache=31536000' \
-  --js-other    '/.nagi/nagi-pages.js?nagi=c59378e303&cache=31536000' \
-  --html-head-s '<link rel="stylesheet" href="/.nagi/nagi-pages.css?nagi=5c996510eb&cache=31536000"><link rel="manifest" href="/.nagi/manifest.json?nagi=b8ef2fba1e&cache=31536000"><link rel="apple-touch-icon" href="/.nagi/icon-180.png?nagi=88d99dbc9b&cache=31536000"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Nagi"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><script nonce="{{ js_nonce }}">(function(){var c="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",m=document.querySelector("meta[name=viewport]");if(m)m.setAttribute("content",c);else{m=document.createElement("meta");m.setAttribute("name","viewport");m.setAttribute("content",c);(document.head||document.documentElement).appendChild(m)}})();</script><script nonce="{{ js_nonce }}" src="/.nagi/nagi-early.js?nagi=b3e2c53135&cache=31536000"></script><script nonce="{{ js_nonce }}" src="/.nagi/nagi.js?nagi=f00e4eb9dc&cache=31536000"></script>' \
+  --css-browser '/.nagi/nagi-boot.css?nagi=4aa84c116d&cache=31536000' \
+  --js-browser  '/.nagi/nagi-late.js?nagi=6266fec95a&cache=31536000' \
+  --js-other    '/.nagi/nagi-pages.js?nagi=de77b2215d&cache=31536000' \
+  --html-head-s '…see examples/run-local.sh…' \
   --favico "凪 17282B EEE5D1" --no-robots
 ```
 
 Then open <http://127.0.0.1:3979/>.
+
+The `--html-head-s` value is too long to paste here (it carries the sand splash, the iOS launch images, the first-paint CSS, and deferred `nagi.js`). Copy the full flag from [`examples/run-local.sh`](examples/run-local.sh) or [`examples/copyparty.conf`](examples/copyparty.conf) — `src/build.py` writes it on every rebuild. `--css-browser` points at a tiny `nagi-boot.css` stub; the real `nagi.css` is loaded from the head, non-blocking, so first paint is not held up.
 
 What each flag does:
 
@@ -90,7 +92,7 @@ What each flag does:
 |---|---|
 | `-v ./nagi/theme:/.nagi:r` | serves the theme files at `/.nagi/`, read-only for everyone |
 | `--css-browser`, `--js-browser` | load Nagi into copyparty's file browser. Quote the URLs: an unquoted `&` is a bash background job. The `?nagi=HASH&cache=31536000` query lets the browser cache the file for a year; `src/build.py` updates the hash when you rebuild |
-| `--js-other` + `--html-head-s` | load the calm login/control-panel pages, the PWA manifest and the iPhone home-screen icon on every other page |
+| `--js-other` + `--html-head-s` | load the calm login/control-panel pages, the sand splash, iOS launch images, the PWA manifest and the iPhone home-screen icon on every other page. Copy the full `--html-head-s` from the examples; a short hand-written head will miss the splash |
 | `--u2j 4` | four parallel up2k upload chunks (good over Tailscale / a phone). Server default is 2 |
 | `--themes 12 --theme 11` | gives Nagi its own copyparty theme slot so copyparty's own colours don't leak in |
 | `--usernames` | log in with username + password (instead of password only) |
@@ -115,9 +117,9 @@ Prefer a config file? See [`examples/copyparty.conf`](examples/copyparty.conf), 
   u2j: 4
   md-hist: v
   rw-edit: md,txt
-  css-browser: /.nagi/nagi.css?nagi=19baa4b577&cache=31536000
-  js-browser: /.nagi/nagi-late.js?nagi=07136a3be5&cache=31536000
-  js-other: /.nagi/nagi-pages.js?nagi=c59378e303&cache=31536000
+  css-browser: /.nagi/nagi-boot.css?nagi=4aa84c116d&cache=31536000
+  js-browser: /.nagi/nagi-late.js?nagi=6266fec95a&cache=31536000
+  js-other: /.nagi/nagi-pages.js?nagi=de77b2215d&cache=31536000
   html-head-s: <link rel="stylesheet" href="/.nagi/nagi-pages.css?nagi=5c996510eb&cache=31536000"> …
 
 [/.nagi]
@@ -135,6 +137,8 @@ Works great over [Tailscale](https://tailscale.com): just bind copyparty to `127
 1. Open your Nagi URL in **Safari**.
 2. Tap **Share** → **Add to Home Screen** → **Add**.
 3. Open it from the home screen. It runs full screen with no address bar, and you stay signed in.
+
+If you already had Nagi on the home screen, **remove it and add it again** after this update — iOS only reads the launch images at add-time, and the media queries on those images have to match the phone exactly (they already do for current iPhones, including the iPhone X at 375×812 @3x). A new launch image is otherwise ignored, and you would still see a white flash.
 
 On mobile, Search / Upload / Settings / More live in the bottom bar. **More → Sign in** takes you to the sign-in page and brings you back to the same folder afterwards. Android/Chrome: menu → *Install app*.
 

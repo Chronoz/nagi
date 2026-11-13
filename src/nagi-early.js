@@ -40,3 +40,53 @@
     }
   }catch(e){}
 })();
+
+/* v4: first paint. The sand splash lives in the inlined head CSS (html::before)
+   so it paints with the first bytes — same colour and mark as the iOS launch
+   image. This only (a) honours a stored yūgure theme so we do not flash paper,
+   (b) promotes the non-blocking stylesheets once they arrive, and (c) fades
+   the splash after #nagi has painted, only if it is still up. */
+(function(){
+  try{
+    var t=localStorage.nagi_theme;
+    if(t==='yugure'||(!t&&/\bfz\b/.test(document.documentElement.className))){
+      document.documentElement.classList.add('nagi-dark');
+      var m=document.querySelector('meta[name="theme-color"]');
+      if(m)m.setAttribute('content','#0F1D1E');
+    }
+  }catch(e){}
+  function promote(id){
+    var l=document.getElementById(id);if(!l)return;
+    var go=function(){if(l.media!=='all')l.media='all'};
+    if(l.sheet)go();else l.addEventListener('load',go);
+    l.addEventListener('error',go);
+  }
+  promote('nagi-pages-css');promote('nagi-css');
+  function fade(){
+    var h=document.documentElement;
+    if(h.classList.contains('nagi-ready')||h.classList.contains('nagi-booted'))return;
+    if(!document.getElementById('nagi'))return;
+    requestAnimationFrame(function(){requestAnimationFrame(function(){
+      if(h.classList.contains('nagi-booted'))return;
+      h.classList.add('nagi-ready');
+      setTimeout(function(){h.classList.add('nagi-booted')},500);
+    })});
+  }
+  var mo,watching=0;
+  function watch(){
+    if(watching){if(document.getElementById('nagi'))fade();return}
+    watching=1;
+    if(document.getElementById('nagi')){fade();return}
+    if(window.MutationObserver&&(document.body||document.documentElement)){
+      mo=new MutationObserver(function(){if(document.getElementById('nagi')){try{mo.disconnect()}catch(e){}fade()}});
+      mo.observe(document.body||document.documentElement,{childList:true,subtree:true});
+    }
+    var n=0,iv=setInterval(function(){
+      if(document.getElementById('nagi')){clearInterval(iv);if(mo)try{mo.disconnect()}catch(e){}fade()}
+      else if(++n>400)clearInterval(iv);
+    },16);
+  }
+  if(document.body)watch();
+  else document.addEventListener('DOMContentLoaded',watch);
+  try{new MutationObserver(function(){if(document.body)watch()}).observe(document.documentElement,{childList:true})}catch(e){}
+})();

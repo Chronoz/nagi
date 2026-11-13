@@ -174,34 +174,121 @@ def update_manifest():
         man.write_text(json.dumps(data, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
     return file_hash(man)
 
+def launch_catalog():
+    """apple-touch-startup-image tags. Media queries must match iOS exactly.
+       Dark variants (prefers-color-scheme: dark) are listed first so they win
+       when they match; light images have no color-scheme clause and are the fallback."""
+    import json
+    cat = O / 'launch' / 'launch.json'
+    if not cat.exists():
+        # generate
+        make = S / 'splash' / 'make.py'
+        if make.exists():
+            subprocess.check_call([sys.executable, str(make), str(O / 'launch'), '/tmp/nagi-v4-launch-shots'])
+    if not cat.exists():
+        return [], {}
+    items = json.loads(cat.read_text())
+    hashes = {}
+    # dark first
+    items_sorted = sorted(items, key=lambda x: (0 if x.get('dark') else 1, x['file']))
+    tags = []
+    for it in items_sorted:
+        fp = O / 'launch' / it['file']
+        if not fp.exists():
+            continue
+        h = file_hash(fp)
+        hashes[it['file']] = h
+        href = qurl('/.nagi/launch/' + it['file'], h)
+        tags.append('<link rel="apple-touch-startup-image" href="' + href + '" media="' + it['media'] + '">')
+    return tags, hashes
+
+def critical_css():
+    """Tiny first-paint CSS: sand page, splash mark centred the same as the launch image."""
+    from urllib.parse import quote
+    def uri(name):
+        fp = O / 'launch' / name
+        if not fp.exists():
+            return ''
+        return 'data:image/svg+xml,' + quote(fp.read_text(encoding='utf-8'), safe='')
+    u = uri('splash-mark.svg')
+    ud = uri('splash-mark-dark.svg')
+    # #F1EADB is --w-bg on #nagi (the surface the user sees). Mark is 96 CSS px, centred.
+    return (
+        'html,body{background:#F1EADB;margin:0}'
+        'html.nagi-dark,html.nagi-dark body{background:#0F1D1E}'
+        'html::before{content:"";position:fixed;inset:0;z-index:2147483646;'
+        'background:#F1EADB url("' + u + '") center center/96px 96px no-repeat;pointer-events:none}'
+        'html.nagi-dark::before{background-color:#0F1D1E;background-image:url("' + ud + '")}'
+        'html.nagi-ready::before{opacity:0;transition:opacity .45s cubic-bezier(.2,.8,.2,1)}'
+        'html.nagi-booted::before{content:none;display:none}'
+    )
+
+def v4_head(hashes: dict) -> str:
+    """Full --html-head-s body. No single quotes (run-local wraps this in them).
+       Order: theme probe, critical CSS, theme-color, iOS launch images, async CSS,
+       viewport lock, early.js (sync, tiny), nagi.js deferred."""
+    def verb(name):
+        return qurl('/.nagi/' + name, hashes[name])
+    tags, _lh = launch_catalog()
+    # persist launch hashes for operators
+    hashes.update({('launch/' + k): v for k, v in _lh.items()} if False else {})
+    theme_js = (
+        '<script nonce="{{ js_nonce }}">(function(){try{var t=localStorage.nagi_theme;'
+        'if(t==="yugure"||(!t&&/\\bfz\\b/.test(document.documentElement.className))){'
+        'document.documentElement.classList.add("nagi-dark");'
+        '}}catch(e){}})();</script>'
+    )
+    style = '<style>' + critical_css() + '</style>'
+    meta = (
+        '<meta name="theme-color" content="#F1EADB">'
+        '<meta name="apple-mobile-web-app-capable" content="yes">'
+        '<meta name="mobile-web-app-capable" content="yes">'
+        '<meta name="apple-mobile-web-app-title" content="Nagi">'
+        '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">'
+        '<link rel="manifest" href="' + qurl('/.nagi/manifest.json', hashes['manifest.json']) + '">'
+        '<link rel="apple-touch-icon" href="' + qurl('/.nagi/icon-180.png', hashes['icon-180.png']) + '">'
+    )
+    # Non-blocking stylesheets: media=print until early.js (or load) promotes them to all.
+    css = (
+        '<link rel="stylesheet" id="nagi-pages-css" href="' + verb('nagi-pages.css') + '" media="print">'
+        '<link rel="stylesheet" id="nagi-css" href="' + verb('nagi.css') + '" media="print">'
+    )
+    vp = (
+        '<script nonce="{{ js_nonce }}">(function(){var c="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",'
+        'm=document.querySelector("meta[name=viewport]");if(m)m.setAttribute("content",c);'
+        'else{m=document.createElement("meta");m.setAttribute("name","viewport");m.setAttribute("content",c);'
+        '(document.head||document.documentElement).appendChild(m)}})();</script>'
+    )
+    early = '<script nonce="{{ js_nonce }}" src="' + verb('nagi-early.js') + '"></script>'
+    # defer: parse the document (and paint the sand splash) without waiting on 155 KB of JS
+    nagi = '<script nonce="{{ js_nonce }}" defer src="' + verb('nagi.js') + '"></script>'
+    return theme_js + style + meta + ''.join(tags) + css + vp + early + nagi
+
+
 def write_run_local(hashes: dict):
     def verb(name):
         return qurl(f'/.nagi/{name}', hashes[name])
     def inject_early(text):
-        if 'nagi-early.js' not in hashes:
-            return text
-        # v3v: mutate copyparty's viewport in place (it sits just above {{ html_head }}).
-        # Double-quoted JS only — html-head-s is wrapped in single quotes in run-local.sh.
-        vp = ('<script nonce="{{ js_nonce }}">(function(){var c="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",m=document.querySelector("meta[name=viewport]");if(m)m.setAttribute("content",c);else{m=document.createElement("meta");m.setAttribute("name","viewport");m.setAttribute("content",c);(document.head||document.documentElement).appendChild(m)}})();</script>')
-        early = '<script nonce="{{ js_nonce }}" src="' + verb('nagi-early.js') + '"></script>'
-        nagi = '<script nonce="{{ js_nonce }}" src="' + verb('nagi.js') + '"></script>'
-        tag = vp + early + nagi
-        text = re.sub(
-            r'<script nonce="\{\{ js_nonce \}\}">\(function\(\)\{var c="width=device-width[^<]*</script>',
-            '', text)
-        if 'nagi-early.js' in text:
+        head = v4_head(hashes)
+        if '--html-head-s' in text:
             text = re.sub(
-                r'<script nonce="\{\{ js_nonce \}\}" src="/\.nagi/nagi-early\.js[^"]*"></script>'
-                r'(?:<script nonce="\{\{ js_nonce \}\}" src="/\.nagi/nagi\.js[^"]*"></script>)?',
-                tag, text)
-        else:
-            text = text.replace('content="black-translucent">', 'content="black-translucent">'+tag, 1)
+                r"(--html-head-s\s+')(.*?)(')",
+                lambda m: m.group(1) + head + m.group(3),
+                text, count=1, flags=re.S)
+        elif 'html-head-s:' in text:
+            text = re.sub(
+                r'(html-head-s:\s*)(\S.*)$',
+                lambda m: m.group(1) + head,
+                text, count=1, flags=re.M)
+        elif 'content="black-translucent">' in text:
+            text = text.replace('content="black-translucent">', 'content="black-translucent">' + head, 1)
         return text
+
     sh = O / 'run-local.sh'
     t = sh.read_text() if sh.exists() else ''
     # css-browser, js-browser, js-other
     # quote the URLs: an unquoted & in ?nagi=&cache= is a bash background job
-    t = re.sub(r"--css-browser '?\S+'?", "--css-browser '" + verb('nagi.css') + "'", t)
+    t = re.sub(r"--css-browser '?\S+'?", "--css-browser '" + verb('nagi-boot.css') + "'", t)
     t = re.sub(r"--js-browser '?\S+'?", "--js-browser '" + verb('nagi-late.js') + "'", t)
     t = re.sub(r"--js-other '?\S+'?", "--js-other '" + verb('nagi-pages.js') + "'", t)
     # html-head-s urls
@@ -218,7 +305,7 @@ def write_run_local(hashes: dict):
     ex = R / 'examples' / 'run-local.sh'
     if ex.exists():
         et = ex.read_text()
-        et = re.sub(r"--css-browser '?\S+'?", "--css-browser '" + verb('nagi.css') + "'", et)
+        et = re.sub(r"--css-browser '?\S+'?", "--css-browser '" + verb('nagi-boot.css') + "'", et)
         et = re.sub(r"--js-browser '?\S+'?", "--js-browser '" + verb('nagi-late.js') + "'", et)
         et = re.sub(r"--js-other '?\S+'?", "--js-other '" + verb('nagi-pages.js') + "'", et)
         et = re.sub(r'href="/\.nagi/nagi-pages\.css[^"]*"', 'href="' + verb('nagi-pages.css') + '"', et)
@@ -235,7 +322,7 @@ def write_run_local(hashes: dict):
             nonlocal ct
             url = qurl(path or ('/.nagi/' + name), hashes[name])
             ct = re.sub(r'(?m)^(\s*'+key+r':\s*)\S+', r'\g<1>'+url, ct)
-        cset('css-browser','nagi.css')
+        cset('css-browser','nagi-boot.css')
         cset('js-browser','nagi-late.js')
         cset('js-other','nagi-pages.js')
         # html-head-s is a long line
@@ -283,8 +370,11 @@ def build():
 
     late = r(S/'nagi-late.js').replace('__NAGI_JS_URL__', qurl('/.nagi/nagi.js', js_h))
     (O/'nagi-late.js').write_text(hdr + minify_js(late))
+    (O/'nagi-boot.css').write_text(hdr + r(S/'nagi-boot.css'))
 
-    hashes = {n: file_hash(O/n) for n in ('nagi.css','nagi.js','nagi-pages.css','nagi-pages.js','nagi-early.js','nagi-late.js','nagi-fonts-defer.css','manifest.json','icon-180.png')}
+    hashes = {n: file_hash(O/n) for n in ('nagi.css','nagi.js','nagi-pages.css','nagi-pages.js','nagi-early.js','nagi-late.js','nagi-boot.css','nagi-fonts-defer.css','manifest.json','icon-180.png')}
+    _, lh = launch_catalog()
+    hashes.update({'launch/'+k: v for k,v in lh.items()})
     write_run_local(hashes)
 
     # mockup (keep readable-enough; minify css/js to keep the file smaller)

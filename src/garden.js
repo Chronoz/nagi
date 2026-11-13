@@ -91,19 +91,21 @@ function layout(items,bound,o){
     else{var rk=Math.pow(k/Math.max(1,n-1),.75);do{var ang=rr()*Math.PI*2,rad=R*(.05+.85*rk)*(.75+.5*rr());x=rc[0]+Math.cos(ang)*rad*(W/Math.max(W,H))*1.15;y=rc[1]+Math.sin(ang)*rad*(H/Math.max(W,H))*1.15;tries++}while(!inRegion(bound,hole,x,y)&&tries<60)}
     if(!inRegion(bound,hole,x,y)){x=rc[0]+(rr()-.5)*W*.3;y=rc[1]+(rr()-.5)*H*.3}
     sites[i]=[x,y];w[i]=0}
-  var cells,it=o.iter||100;
+  var cells,it=o.iter||100,still=0;
   for(var t=0;t<it;t++){
     cells=power(sites,w,bound,hole);
-    var damp=cor?(t<it*.6?.6:.4):(t<it*.6?1:.55);
+    var damp=cor?(t<it*.6?.6:.4):(t<it*.6?1:.55),moved=0;
     for(var i=0;i<n;i++){
       var c=cells[i],a=c.length>2?Math.abs(area(c)):0;
       if(a<1){w[i]=w[i]*.5+0;if(items[i].pin==='br'){sites[i]=[bb[2]-28,bb[3]-28]}else sites[i]=[sites[i][0]+(rc[0]-sites[i][0])*.02,sites[i][1]+(rc[1]-sites[i][1])*.02];continue}
       var cg=centroid(c);if(!inRegion(bound,hole,cg[0],cg[1])){var pp=pole(c);cg=[pp.x,pp.y]}
-      if(i!==ai&&!items[i].pin){sites[i]=pushOut(bound,hole,[sites[i][0]+(cg[0]-sites[i][0])*damp,sites[i][1]+(cg[1]-sites[i][1])*damp]);
+      if(i!==ai&&!items[i].pin){var nx=sites[i][0]+(cg[0]-sites[i][0])*damp,ny=sites[i][1]+(cg[1]-sites[i][1])*damp,md=(nx-sites[i][0])*(nx-sites[i][0])+(ny-sites[i][1])*(ny-sites[i][1]);if(md>moved)moved=md;sites[i]=pushOut(bound,hole,[nx,ny]);
         if(cor){var ex=(sites[i][0]-cor[0])/sx,ey=(sites[i][1]-cor[1])/sy,e=Math.hypot(ex,ey),em=rF*1.08;if(e<em&&e>0){sites[i]=[cor[0]+ex/e*em*sx,cor[1]+ey/e*em*sy]}}}
       w[i]=w[i]+.9*(tgt[i]-a)/Math.PI}
     var mn=Math.min.apply(null,w);for(var i=0;i<n;i++)w[i]-=mn;
     for(var i=0;i<n;i++)for(var j=0;j<n;j++){if(i===j)continue;var dx=sites[i][0]-sites[j][0],dy=sites[i][1]-sites[j][1],d2=dx*dx+dy*dy;if(w[i]-w[j]>d2*.9)w[i]=w[j]+d2*.9}
+    /* v4: stop once sites have settled — same shape, fewer wasted iterations. */
+    if(t>14&&moved<0.16){still++;if(still>=2)break}else still=0;
   }
   cells=power(sites,w,bound,hole);
   return cells.map(function(c,i){return {item:items[i],poly:c,area:c.length>2?Math.abs(area(c)):0,c:c.length>2?centroid(c):sites[i]}}).filter(function(x){return x.area>4});
@@ -184,5 +186,5 @@ function cutBR(p,x0,y0){
   return dedupe(o,.01);
 }
 
-window.NagiGarden={bulge:bulge,swatch:swatch,layout:layout,inset:inset,path:path,prad:prad,rings:rings,contours:contours,pole:pole,area:area,centroid:centroid,bbox:bbox,roundRect:roundRect,hash:hash,rng:rng,inside:inside,cut:cut,clip:clip,cutBR:cutBR};
+window.NagiGarden={bulge:bulge,swatch:swatch,layout:layout,inset:inset,path:path,prad:prad,rings:rings,contours:contours,pole:pole,area:area,centroid:centroid,bbox:bbox,roundRect:roundRect,hash:hash,rng:rng,inside:inside ,cut:cut,clip:clip};
 })();

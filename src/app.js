@@ -131,9 +131,27 @@ function memSave(){
   if(st.view=='garden'&&$.zoom)[].forEach.call($.zoom.querySelectorAll('.cell.in'),function(g){g.classList.remove('in')});
   var garden=st.view=='garden'&&$.zoom?{zoom:$.zoom.innerHTML,lbs:$.lbs?$.lbs.innerHTML:'',cells:st.cells,band:st.band,hole2:st.hole2}:null;
   MEM[memKey(st.path)]={t:Date.now(),data:st.data,view:st.view,scroll:snapScroll(),acct:A.user||'*',sk:sizeKey(),garden:garden};
-  var ks=Object.keys(MEM);if(ks.length>MEMN){ks.sort(function(a,b){return MEM[a].t-MEM[b].t});for(var i=0;i<ks.length-MEMN;i++)delete MEM[ks[i]]}}
+  var ks=Object.keys(MEM);if(ks.length>MEMN){ks.sort(function(a,b){return MEM[a].t-MEM[b].t});for(var i=0;i<ks.length-MEMN;i++)delete MEM[ks[i]]}
+  memPersist();
+}
+function memPersist(){
+  try{
+    var k=st.path&&memKey(st.path),e=k&&MEM[k];
+    if(!e||!e.data)return;
+    var g=e.garden,dump={k:k,path:st.path,t:e.t,data:e.data,view:e.view,scroll:e.scroll,acct:e.acct,sk:e.sk,
+      garden:g&&{zoom:g.zoom,lbs:g.lbs,band:g.band,hole2:g.hole2,cells:g.cells}};
+    localStorage.setItem('nagi_mem',JSON.stringify(dump));
+  }catch(err){try{var e2=MEM[memKey(st.path)];if(e2)localStorage.setItem('nagi_mem',JSON.stringify({k:memKey(st.path),path:st.path,t:e2.t,data:e2.data,view:e2.view,scroll:e2.scroll,acct:e2.acct,sk:e2.sk,garden:e2.garden&&{zoom:e2.garden.zoom,lbs:e2.garden.lbs}}))}catch(e3){}}
+}
+function memHydrate(){
+  try{
+    var dump=JSON.parse(localStorage.getItem('nagi_mem')||'null');
+    if(!dump||!dump.data||!dump.k)return;
+    MEM[dump.k]=dump;
+  }catch(e){}
+}
 function memGet(p){var e=MEM[memKey(p)];return e&&e.data?e:null}
-function memClear(){MEM={};wf3clear()}
+function memClear(){MEM={};wf3clear();try{localStorage.removeItem('nagi_mem')}catch(e){}}
 function memInvalidate(path){if(!path){MEM={};return}Object.keys(MEM).forEach(function(k){var p=k.split('\0')[0];if(p===path||p.indexOf(path)===0||path.indexOf(p)===0)delete MEM[k]})}
 function listingSig(d){if(!d)return '';var all=d.all||d.items||[],bits=[d.acct||'',String(d.free||''),all.length];for(var i=0;i<all.length;i++){var x=all[i];bits.push(x.path,x.size||0,x.ts||0,x.count!=null?x.count:'',x.dom||'')}return bits.join('\t')}
 function sameFolder(a,b){return (a||'/').replace(/\/$/,'')===(b||'/').replace(/\/$/,'')}
@@ -454,7 +472,7 @@ function rakeRings(p,step,maxn,amt){
     });
   });
 }
-function fieldLayout(it,W,H,M0,hole,mob){var R=mob?22:34,iter=it.length>40?80:120;st.band=null;st.moreSlot=null;
+function fieldLayout(it,W,H,M0,hole,mob){var R=mob?22:34,iter=it.length>40?48:64;st.band=null;st.moreSlot=null;try{performance.mark("nagi-layout-start")}catch(e){}
   if(!hole||hole[3]>H-60){var x0=hole?hole[2]:M0;return G.layout(it,G.roundRect(x0,M0,W-M0-x0,H-2*M0,R),{seed:st.path,iter:iter,corner:[x0+2,M0+2]})}
   var X=hole[2],Y=hole[3],B=H-M0,bh=B-Y,bw=X-M0;
   // the strip under the column: real stones sit in a fan-shaped patch toward the field (top edge rising to
@@ -554,7 +572,7 @@ function render(anim){if(!st.data)return;if(!st.data.all)st.data.all=st.data.ite
   st.anchor=hole?[hole[2]+Math.min(260,(W-hole[2])*.28),Math.min(H*.3,hole[3]*.5)]:[W*.28,H*.26];
   var it=items();
   if(!it.length){$.zoom.innerHTML='';$.lbs.innerHTML='<div class="empty" style="left:'+(hole?hole[2]:0)+'px"><div><div class="pebble0"></div><h3>An empty clearing</h3><p class="hint">Drop files anywhere, or use Upload.</p></div></div>';st.cells=[];return}
-  st.hole2=null;var M0=mob?4:8,cells=fieldLayout(it,W,H,M0,hole,mob);st.cells=cells;
+  st.hole2=null;var M0=mob?4:8,tL=typeof performance!="undefined"?performance.now():0,cells=fieldLayout(it,W,H,M0,hole,mob);st.cells=cells;try{performance.measure("nagi-layout","nagi-layout-start");performance.mark("nagi-layout-end")}catch(e){}
   var svg='',lbs='',sandI=-1,sandA=0;cells.forEach(function(c,i){var o=c.item,x=o.x;if(st.path!='/')return;if(o.free||o.up||!x)return;if((x.type=='image'||x.type=='video')&&A.thumb)return;if(c.area>sandA){sandA=c.area;sandI=i}});
   cells.forEach(function(c,i){c.idx=i;var o=c.item,x=o.x,poly=G.inset(c.poly,gap/2);if(poly.length<3)return;
     var hz=st.hole2||hole,thr=gap/2+3,outer=function(m){if(m[0]<M0+thr||m[0]>W-M0-thr||m[1]<M0+thr||m[1]>H-M0-thr)return true;if(hz&&((Math.abs(m[0]-hz[2])<thr&&m[1]<hz[3])||(Math.abs(m[1]-hz[3])<thr&&m[0]<hz[2])))return true;if(st.band&&m[0]<st.band.x1-thr&&Math.abs(polyD(m,st.band.poly))<thr)return true;return false};
@@ -1316,7 +1334,7 @@ function drops(){var n=0;function show(on){$.dz.classList.toggle('on',on);if(on)
 
 window.NagiApp={start:function(adapter){if(window.__nagiStarted)return;window.__nagiStarted=1;A=adapter;
   var _inv=A.invalidate;A.invalidate=function(path){memInvalidate(path);if(_inv)_inv(path)};
-  build();try{performance.mark('nagi-bb')}catch(e){}try{if(window.NagiFit)NagiFit()}catch(e){}var p=A.start();st.path=null;go(p,false);
+  build();try{performance.mark('nagi-bb')}catch(e){}try{if(window.NagiFit)NagiFit()}catch(e){}memHydrate();var p=A.start();st.path=null;go(p,false);
   addEventListener('popstate',function(){
     if(st._skipPop){st._skipPop=false;return}
     if(st.lb||st.sheet||drawerIsOv()){
