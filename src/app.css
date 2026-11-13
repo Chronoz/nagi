@@ -240,9 +240,7 @@ html.fz #nagi svg.g .cell:not(.free):hover .f{filter:drop-shadow(0 6px 10px rgba
 #nagi .lbx .strip{display:flex;height:100%;width:300%;will-change:transform;transform:translate3d(-33.333%,0,0)}
 #nagi .lbx .slot{position:relative;flex:0 0 33.333%;height:100%;min-width:0}
 #nagi .lbx img{position:absolute;inset:0;margin:auto;max-width:100%;max-height:100%;border-radius:4px;box-shadow:0 30px 60px -30px rgba(10,24,26,.6);animation:nrise .4s var(--n-ease)}
-#nagi .lbx .slot img.ph{filter:blur(14px);transform:scale(1.08);opacity:.9;box-shadow:none;animation:none}
-#nagi .lbx .slot img.wf{opacity:0}
-#nagi .lbx .slot img.wf.on{opacity:1;transition:opacity .25s var(--n-ease)}
+#nagi .lbx .slot img.ph{filter:blur(14px);transform:scale(1.08);box-shadow:none;animation:none}
 #nagi .lbx .strip.drag,#nagi .lbx .strip.snap{animation:none}
 #nagi .lbx .strip.drag{transition:none}
 #nagi .lbx .strip.snap{transition:transform .32s cubic-bezier(.2,.8,.2,1)}
@@ -470,7 +468,7 @@ html.fz #nagi svg.g .cell:not(.free):hover .f{filter:drop-shadow(0 6px 10px rgba
  #nagi .sh-h{padding:16px 14px 6px 20px}
  #nagi .sh-h h3{font-size:21px}
  #nagi .sheet.wide video{width:100%;max-height:52vh;border-radius:10px;background:#000}
- #nagi .lbx .cap{flex-wrap:wrap;gap:4px;font-size:12.5px}
+ #nagi .lbx .cap{flex-wrap:wrap;gap:4px;font-size:12.5px;min-height:48px;align-content:center}
  #nagi .lbx .cap b{max-width:56vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 }
 #nagi .tbn{color:var(--n-ink2)}

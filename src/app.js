@@ -692,37 +692,36 @@ function lbOpen(list,i){st.lb={list:list,i:i||0};$.lbx.classList.add('on');if(li
    fetched here; Download stays ?dl. */
 function lbSlot(slot,x,rise){
   var kind=slot.classList.contains('prev')?'prev':slot.classList.contains('next')?'next':'cur';
+  var token=slot._gen=(slot._gen||0)+1;
   slot.innerHTML='';slot.className='slot '+kind;
   if(!x){slot.classList.add('empty');return}
-  var u=wf3url(x),hit=u&&wf3get(u),th=thUrl(x),gen=st.lb&&st.lb.gen;
-  function putWf(src,fromCache){
-    if(!slot.isConnected||(st.lb&&st.lb.gen!==gen))return;
+  var u=wf3url(x),hit=u&&wf3get(u),th=thUrl(x);
+  function putWf(src){
+    if(!slot.isConnected||slot._gen!==token)return;
     if(slot.querySelector('img.wf'))return;
     var im=new Image();
     im.alt=x.name;im.decoding='async';
     im.className='wf'+(rise?'':' norise');
     function show(){
-      if(!slot.isConnected||(st.lb&&st.lb.gen!==gen))return;
+      if(!slot.isConnected||slot._gen!==token)return;
       if(slot.querySelector('img.wf'))return;
-      var hasPh=!!slot.querySelector('img.ph');
-      if(!hasPh)im.classList.add('on');
       slot.appendChild(im);
-      if(hasPh)requestAnimationFrame(function(){im.classList.add('on')});
-      if(hasPh)setTimeout(function(){var p=slot.querySelector('img.ph');if(p)p.remove()},280);
+      var ph=slot.querySelector('img.ph');
+      if(ph)ph.remove();
     }
     function go(){if(im.decode)im.decode().then(show,show);else show()}
     im.onerror=function(){var s=im.getAttribute('src')||'';if(/[?&]th=w/.test(s)){im.onerror=function(){};im.src=s.replace('th=w','th=j')}};
-    if(fromCache&&im){im.onload=null;im.src=src;if(im.complete&&im.naturalWidth)go();else im.onload=go;return}
     im.onload=go;im.src=src;
+    if(im.complete&&im.naturalWidth)go();
   }
-  if(hit){putWf(hit.src,true);return}
+  if(hit){putWf(hit.src);return}
   if(th){
     var ph=new Image();ph.alt='';ph.className='ph norise';
     ph.onerror=function(){var s=ph.getAttribute('src')||'';if(/[?&]th=w/.test(s)){ph.onerror=null;ph.src=s.replace('th=w','th=j')}};
     ph.src=th;slot.appendChild(ph);
   }
-  if(u)wf3ready(u,function(img){putWf(img.src,true)});
-  else if(!th&&x&&kind==='cur'){var im=new Image();im.alt=x.name;im.className='wf on'+(rise?'':' norise');im.src=A.url(x);slot.appendChild(im)}
+  if(u)wf3ready(u,function(img){putWf(img.src)});
+  else if(!th&&x&&kind==='cur'){var im=new Image();im.alt=x.name;im.className='wf'+(rise?'':' norise');im.src=A.url(x);slot.appendChild(im)}
 }
 function lbStrip(){
   var box=$.lbx.querySelector('.im'),strip=box&&box.querySelector('.strip');
@@ -730,24 +729,64 @@ function lbStrip(){
   if(!strip){box.innerHTML='';strip=document.createElement('div');strip.className='strip';box.appendChild(strip)}
   return strip;
 }
+function lbPane(){var im=$.lbx&&$.lbx.querySelector('.im');return (im&&im.clientWidth)||innerWidth}
+function lbHome(strip,W){
+  if(!strip)return;
+  W=W||lbPane();
+  strip.style.transition='none';
+  strip.classList.remove('drag','snap');
+  strip.style.transform='translate3d('+(-W)+'px,0,0)';
+}
+function lbPaintCap(){
+  if(!st.lb)return;
+  var list=st.lb.list,i=st.lb.i,x=list[i];if(!x)return;
+  $.lbx.querySelector('.cap').innerHTML='<span><b>'+esc(x.name)+'</b><button class="ib sm dl" type="button" aria-label="Download full size" title="Download full size (⇧S)">'+ic('download')+'<span>Download</span></button>'+fs(x.size)+' · '+esc(rel(x.ts))+'</span><span>'+(i+1)+' of '+list.length+'</span>';
+  $.lbx.querySelector('.cap .dl').onclick=function(){download([x])};
+  $.lbx.querySelector('.p').style.visibility=i>0?'':'hidden';
+  $.lbx.querySelector('.n').style.visibility=i<list.length-1?'':'hidden';
+}
+/* v3z3: after a snap (or an arrow), recycle the three slot nodes so the
+   already-painted neighbour becomes current without touching its src.
+   Only the far slot that just left the screen is reloaded. Transform is
+   reset in the same frame with transitions off, so WebKit never blanks. */
+function lbAdvance(dir){
+  if(!st.lb)return false;
+  var list=st.lb.list,i=st.lb.i+dir;
+  if(i<0||i>=list.length)return false;
+  var strip=lbStrip(),slots=strip&&strip.children;
+  if(!strip||slots.length!==3){st.lb.i=i;wf3.dir=dir;lbShow();return true}
+  var W=lbPane();
+  /* transition off BEFORE any DOM or transform change */
+  strip.style.transition='none';
+  strip.classList.remove('drag','snap');
+  var a=slots[0],b=slots[1],c=slots[2],far;
+  if(dir>0){strip.appendChild(a);b.className='slot prev';c.className='slot cur';a.className='slot next';far=a}
+  else{strip.insertBefore(c,a);c.className='slot prev';a.className='slot cur';b.className='slot next';far=c}
+  strip.style.transform='translate3d('+(-W)+'px,0,0)';
+  void strip.offsetWidth;
+  st.lb.i=i;wf3.dir=dir;
+  lbSlot(far,list[i+dir],false);
+  lbPreload(list,i);
+  lbPaintCap();
+  return true;
+}
 function lbShow(){
   if(!st.lb)return;
-  var list=st.lb.list,i=st.lb.i,x=list[i],gen=(lbShow.g=(lbShow.g||0)+1);
-  st.lb.gen=gen;
-  var noRise=!!st.lb.noRise;st.lb.noRise=0;
+  var list=st.lb.list,i=st.lb.i,x=list[i],noRise=!!st.lb.noRise;st.lb.noRise=0;
   var strip=lbStrip();if(!strip)return;
+  var W=lbPane();
+  strip.style.transition='none';strip.classList.remove('drag','snap');
   strip.innerHTML='<div class="slot prev"></div><div class="slot cur"></div><div class="slot next"></div>';
-  /* paint neighbours first so their imgs are in the DOM before a swipe starts */
   lbPreload(list,i);
   lbSlot(strip.querySelector('.prev'),list[i-1],false);
   lbSlot(strip.querySelector('.cur'),x,!noRise);
   lbSlot(strip.querySelector('.next'),list[i+1],false);
-  strip.style.transition='none';strip.classList.remove('drag','snap');
-  strip.style.transform='translate3d(-33.333%,0,0)';
-  $.lbx.querySelector('.cap').innerHTML='<span><b>'+esc(x.name)+'</b><button class="ib sm dl" type="button" aria-label="Download full size" title="Download full size (⇧S)">'+ic('download')+'<span>Download</span></button>'+fs(x.size)+' · '+esc(rel(x.ts))+'</span><span>'+(i+1)+' of '+list.length+'</span>';
-  $.lbx.querySelector('.cap .dl').onclick=function(){download([x])};
-  $.lbx.querySelector('.p').style.visibility=i>0?'':'hidden';$.lbx.querySelector('.n').style.visibility=i<list.length-1?'':'hidden'}
-function lbStep(d){if(!st.lb)return;var n=st.lb.i+d;if(n<0||n>=st.lb.list.length)return;st.lb.i=n;wf3.dir=d;lbShow()}
+  strip.style.transform='translate3d('+(-W)+'px,0,0)';
+  void strip.offsetWidth;
+  lbPaintCap();
+}
+function lbStep(d){if(!st.lb)return;lbAdvance(d)}
+
 /* v3z preview cache: at most 8 decoded wf3 bitmaps, 2 fetches at a time. */
 var wf3={map:Object.create(null),ord:[],q:[],busy:0,gen:0,dir:1,MAX:8,CONCUR:2,wait:Object.create(null)};
 function wf3url(x){return (x&&!x.isDir&&x.type=='image'&&A.thumb)?A.thumb(x,'preview'):null}
@@ -852,17 +891,15 @@ function lbSet(x){
    the original is never fetched. Desktop keeps the arrow keys. */
 function lbSwipe(){
   var s=null,eat=false;
-  function pane(){var im=$.lbx&&$.lbx.querySelector('.im');return (im&&im.clientWidth)||innerWidth}
   function strip(){return $.lbx&&$.lbx.querySelector('.im .strip')}
-  function reset(el,home){if(!el)return;el.style.transition='';el.classList.remove('drag','snap');el.style.transform='translate3d('+(home!=null?home:-pane())+'px,0,0)'}
   function onDown(e){
     if(!st.lb||!$.lbx.classList.contains('on'))return;
     if(e.pointerType==='mouse'||(e.button!=null&&e.button>0)||e.isPrimary===false)return;
     if(e.target.closest&&e.target.closest('.nav,.x,.cap,button,.dl'))return;
     var el=strip();if(!el)return;
-    var W=pane();
+    var W=lbPane();
     s={x:e.clientX,y:e.clientY,t:Date.now(),el:el,moved:false,dx:0,pid:e.pointerId,W:W,base:-W};
-    el.style.transition='none';el.style.transform='translate3d('+(-W)+'px,0,0)';
+    lbHome(el,W);
     try{$.lbx.setPointerCapture(e.pointerId)}catch(_){}
   }
   function onMove(e){
@@ -876,27 +913,35 @@ function lbSwipe(){
   }
   function onEnd(e){
     if(!s||(e&&s.pid!==e.pointerId))return;
-    var D=s;s=null;var el=D.el,dx=D.dx,dt=Math.max(1,Date.now()-D.t),v=dx/dt,W=D.W||pane();
-    if(!D.moved){reset(el,-W);return}
+    var D=s;s=null;var el=D.el,dx=D.dx,dt=Math.max(1,Date.now()-D.t),v=dx/dt,W=D.W||lbPane();
+    if(!D.moved){lbHome(el,W);return}
     eat=true;setTimeout(function(){eat=false},350);
     var dir=(Math.abs(dx)>56||Math.abs(v)>.35)?(dx<0?1:-1):0;
     var can=dir&&st.lb&&st.lb.i+dir>=0&&st.lb.i+dir<st.lb.list.length;
     function snap(to,done){
-      if(RM){if(done)done();reset(el,-W);return}
+      if(RM){if(done)done();else lbHome(el,W);return}
       el.classList.remove('drag');el.classList.add('snap');
       el.style.transition='transform .32s cubic-bezier(.2,.8,.2,1)';
       el.style.transform='translate3d('+to+'px,0,0)';
-      setTimeout(function(){if(done)done();else reset(el,-W)},330);
+      var finished=false;
+      function end(){
+        if(finished)return;finished=true;
+        if(done)done();
+        else lbHome(el,W);
+      }
+      el.addEventListener('transitionend',end,{once:true});
+      setTimeout(end,400);
     }
-    /* snap the whole strip so the neighbour that was already on screen lands in the middle */
-    if(can)snap(dir>0?-2*W:0,function(){if(st.lb){st.lb.noRise=1;lbStep(dir)}});
+    /* snap so the already-painted neighbour sits in the middle, then
+       recycle the slot nodes — do not rebuild or reassign src. */
+    if(can)snap(dir>0?-2*W:0,function(){if(st.lb)lbAdvance(dir)});
     else snap(-W);
   }
   $.lbx.addEventListener('pointerdown',onDown);
   $.lbx.addEventListener('pointermove',onMove);
   $.lbx.addEventListener('pointerup',onEnd);
-  $.lbx.addEventListener('pointercancel',function(e){if(!s||s.pid!==e.pointerId)return;var el=s.el;s=null;reset(el)});
-  $.lbx.addEventListener('touchstart',function(e){if(e.touches&&e.touches.length>1){if(s){reset(s.el);s=null}}},{passive:true});
+  $.lbx.addEventListener('pointercancel',function(e){if(!s||s.pid!==e.pointerId)return;var el=s.el;s=null;lbHome(el)});
+  $.lbx.addEventListener('touchstart',function(e){if(e.touches&&e.touches.length>1){if(s){lbHome(s.el);s=null}}},{passive:true});
   $.lbx.addEventListener('touchmove',function(e){if(s&&s.moved&&e.cancelable)e.preventDefault()},{passive:false});
   $.lbx.addEventListener('click',function(e){if(eat){e.preventDefault();e.stopPropagation()}},true);
 }
