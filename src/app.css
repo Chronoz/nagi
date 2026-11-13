@@ -236,8 +236,16 @@ html.fz #nagi svg.g .cell:not(.free):hover .f{filter:drop-shadow(0 6px 10px rgba
 /* lightbox */
 #nagi .lbx{position:absolute;inset:0;z-index:12;background:color-mix(in srgb,var(--w-bg) 94%,transparent);backdrop-filter:blur(8px);display:none;grid-template-rows:1fr auto;padding:30px 80px 22px}
 #nagi .lbx.on{display:grid;animation:nfade .3s}
-#nagi .lbx .im{position:relative;min-height:0}
+#nagi .lbx .im{position:relative;min-height:0;overflow:hidden}
+#nagi .lbx .strip{display:flex;height:100%;width:300%;will-change:transform;transform:translate3d(-33.333%,0,0)}
+#nagi .lbx .slot{position:relative;flex:0 0 33.333%;height:100%;min-width:0}
 #nagi .lbx img{position:absolute;inset:0;margin:auto;max-width:100%;max-height:100%;border-radius:4px;box-shadow:0 30px 60px -30px rgba(10,24,26,.6);animation:nrise .4s var(--n-ease)}
+#nagi .lbx .slot img.ph{filter:blur(14px);transform:scale(1.08);opacity:.9;box-shadow:none;animation:none}
+#nagi .lbx .slot img.wf{opacity:0}
+#nagi .lbx .slot img.wf.on{opacity:1;transition:opacity .25s var(--n-ease)}
+#nagi .lbx .strip.drag,#nagi .lbx .strip.snap{animation:none}
+#nagi .lbx .strip.drag{transition:none}
+#nagi .lbx .strip.snap{transition:transform .32s cubic-bezier(.2,.8,.2,1)}
 #nagi .lbx .cap{display:flex;justify-content:space-between;align-items:center;padding-top:16px;font-size:13px;color:var(--n-mute)}
 #nagi .lbx .cap b{font-weight:500;color:var(--n-ink);margin-right:10px}
 #nagi .lbx .nav{position:absolute;top:50%;transform:translateY(-50%)}

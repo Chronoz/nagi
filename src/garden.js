@@ -65,25 +65,27 @@ function layout(items,bound,o){
   var order=items.map(function(_,i){return i}).sort(function(a,b){return items[b].weight-items[a].weight});
   var R=Math.hypot(W,H)/2,under={};
   // seed a fair share of stones in the band under the column so the field flows beneath it
-  if(hole&&hole[3]<bb[3]-20&&hole[2]>bb[0]+20){var r2=[bb[0],hole[3],Math.min(hole[2],bb[2]),bb[3]],a2=(r2[2]-r2[0])*(r2[3]-r2[1]),k2=Math.round(n*a2/A*1.05),cand=order.slice(1).filter(function(i){return !items[i].anchor});
+  if(hole&&hole[3]<bb[3]-20&&hole[2]>bb[0]+20){var r2=[bb[0],hole[3],Math.min(hole[2],bb[2]),bb[3]],a2=(r2[2]-r2[0])*(r2[3]-r2[1]),k2=Math.round(n*a2/A*1.05),cand=order.slice(1).filter(function(i){return !items[i].anchor&&!items[i].pin&&!items[i].more});
     cand.sort(function(a,b){return (hash(items[a].key||'')%997)-(hash(items[b].key||'')%997)});
     var w2=0,wt=tot*a2/A;for(var q=0;q<cand.length&&k2>0;q++){var i=cand[q];if(w2+items[i].weight>wt*1.15)continue;under[i]=r2;w2+=items[i].weight;k2--}}
   // corner fan (Kanso): one stone (Free, else the largest) is pinned in a corner and the rest radiate
   // out from it by size, so the gaps form concentric, curving flows.
   var cor=o.corner||null,ai=-1,acc=0,sx=1,sy=1,fk=0;
-  if(cor){for(var q=0;q<n;q++)if(items[q].anchor)ai=q;if(ai<0)ai=order[0];sx=Math.sqrt(W/H);sy=Math.sqrt(H/W);acc=tgt[ai];under={}}
+  if(cor){for(var q=0;q<n;q++)if(items[q].anchor)ai=q;if(ai<0){for(var q=0;q<order.length;q++)if(!items[order[q]].pin&&!items[order[q]].more){ai=order[q];break}if(ai<0)ai=order[0]}sx=Math.sqrt(W/H);sy=Math.sqrt(H/W);acc=tgt[ai];under={}}
   // first ring around the pinned stone: the next few stones, largest at the middle of the arc,
   // smaller ones toward its ends, so the pinned stone's edge reads as one smooth curve
   var rF=cor?Math.sqrt(4*tgt[ai]/Math.PI):0,ring=cor?Math.min(n-1,n>12?6:n>6?5:4):0,RA=[];
   if(ring){var mid=[.5,.24,.76,.06,.94,.38,.62].slice(0,ring);RA=mid}
   for(var k=0;k<n;k++){var i=order[k],rr=rng(hash((o.seed||'')+'|'+(items[i].key||(''+i)))),x,y,tries=0;
     if(cor&&i===ai){var r0=Math.sqrt(4*tgt[i]/Math.PI);x=cor[0]+r0*sx*.34;y=cor[1]+r0*sy*.34}
+    else if(items[i].pin==='br'){var pr=Math.sqrt(Math.max(tgt[i],400)/Math.PI);x=bb[2]-Math.max(24,Math.min(pr*.55,W*.22));y=bb[3]-Math.max(24,Math.min(pr*.55,H*.22))}
     else if(cor&&fk<ring){var rd=rF*1.12+Math.sqrt(tgt[i]/Math.PI)*.9,an=RA[fk]*Math.PI/2;fk++;acc+=tgt[i];
       x=cor[0]+Math.cos(an)*rd*sx;y=cor[1]+Math.sin(an)*rd*sy;
       x=Math.min(bb[2]-6-rr()*20,Math.max(bb[0]+6,x));y=Math.min(bb[3]-6-rr()*20,Math.max(bb[1]+6,y))}
     else if(cor){var rd=Math.max(rF*1.6,Math.sqrt(4*(acc+tgt[i]*.5)/Math.PI)),an=(.05+.9*((fk*.618034+.31)%1))*Math.PI/2;fk++;acc+=tgt[i];
       x=cor[0]+Math.cos(an)*rd*sx;y=cor[1]+Math.sin(an)*rd*sy;
       x=Math.min(bb[2]-6-rr()*20,Math.max(bb[0]+6,x));y=Math.min(bb[3]-6-rr()*20,Math.max(bb[1]+6,y))}
+    else if(items[i].pin==='br'){var pr=Math.sqrt(Math.max(tgt[i],400)/Math.PI);x=bb[2]-Math.max(24,Math.min(pr*.55,W*.22));y=bb[3]-Math.max(24,Math.min(pr*.55,H*.22))}
     else if(items[i].anchor){x=items[i].anchor[0];y=items[i].anchor[1]}
     else if(under[i]){var u=under[i];x=u[0]+(u[2]-u[0])*(.1+.8*rr());y=u[1]+(u[3]-u[1])*(.15+.7*rr())}
     else{var rk=Math.pow(k/Math.max(1,n-1),.75);do{var ang=rr()*Math.PI*2,rad=R*(.05+.85*rk)*(.75+.5*rr());x=rc[0]+Math.cos(ang)*rad*(W/Math.max(W,H))*1.15;y=rc[1]+Math.sin(ang)*rad*(H/Math.max(W,H))*1.15;tries++}while(!inRegion(bound,hole,x,y)&&tries<60)}
@@ -95,9 +97,9 @@ function layout(items,bound,o){
     var damp=cor?(t<it*.6?.6:.4):(t<it*.6?1:.55);
     for(var i=0;i<n;i++){
       var c=cells[i],a=c.length>2?Math.abs(area(c)):0;
-      if(a<1){w[i]=w[i]*.5+0;sites[i]=[sites[i][0]+(rc[0]-sites[i][0])*.02,sites[i][1]+(rc[1]-sites[i][1])*.02];continue}
+      if(a<1){w[i]=w[i]*.5+0;if(items[i].pin==='br'){sites[i]=[bb[2]-28,bb[3]-28]}else sites[i]=[sites[i][0]+(rc[0]-sites[i][0])*.02,sites[i][1]+(rc[1]-sites[i][1])*.02];continue}
       var cg=centroid(c);if(!inRegion(bound,hole,cg[0],cg[1])){var pp=pole(c);cg=[pp.x,pp.y]}
-      if(i!==ai){sites[i]=pushOut(bound,hole,[sites[i][0]+(cg[0]-sites[i][0])*damp,sites[i][1]+(cg[1]-sites[i][1])*damp]);
+      if(i!==ai&&!items[i].pin){sites[i]=pushOut(bound,hole,[sites[i][0]+(cg[0]-sites[i][0])*damp,sites[i][1]+(cg[1]-sites[i][1])*damp]);
         if(cor){var ex=(sites[i][0]-cor[0])/sx,ey=(sites[i][1]-cor[1])/sy,e=Math.hypot(ex,ey),em=rF*1.08;if(e<em&&e>0){sites[i]=[cor[0]+ex/e*em*sx,cor[1]+ey/e*em*sy]}}}
       w[i]=w[i]+.9*(tgt[i]-a)/Math.PI}
     var mn=Math.min.apply(null,w);for(var i=0;i<n;i++)w[i]-=mn;

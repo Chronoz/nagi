@@ -426,10 +426,12 @@ function items(){var d=st.data,list=d.items.slice(),out=[],sum=0,mx=0,cap=innerW
   list.sort(function(a,b){var wa=Math.pow((a.size||0)+1,.62),wb=Math.pow((b.size||0)+1,.62);return (wb-wa)||((b.isDir?1:0)-(a.isDir?1:0))||(a.name||'').localeCompare(b.name||'')});
   var rest=0;if(list.length>cap){rest=list.length-(cap-1);list=list.slice(0,cap-1)}
   list.forEach(function(x){var w=Math.pow((x.size||0)+1,.62);mx=Math.max(mx,w);out.push({key:x.path,weight:w,x:x});sum+=w});
-  /* v3z: the +N sand-ring is not a stone in the diagram. It is parked in
-     the bottom-right corner after layout, so weight never moves it. */
+  /* v3z2: +N is a genuine cell in the tessellation, pinned to the
+     bottom-right so neighbours curve around it with the same gutter.
+     Weight is modest (a quiet corner stone) but enough for a ≥44px target. */
   st.moreRest=rest;
   var n=out.length,floor=Math.max(sum*(n>24?.0045:.012),mx*.012,1);out.forEach(function(o){o.weight=Math.max(o.weight,floor)});sum=out.reduce(function(a,o){return a+o.weight},0);
+  if(rest){var mw=Math.max(sum*(innerWidth<=760?.09:.055),floor*5);out.push({key:'more',weight:mw,more:rest,pin:'br'});sum+=mw}
   st.ups.filter(function(u){return u.dir==st.path&&u.state!='ok'}).forEach(function(u){if(list.some(function(x){return x.name==u.name}))return;var w=Math.max(Math.pow(u.size+1,.62),floor);out.push({key:'up:'+u.name,weight:w,up:u});sum+=w});
   if(st.path=='/'&&d.free!=null){var fw=Math.min(sum*.5,Math.max(sum*.3,Math.pow(d.free,.62)));out.push({key:'free',weight:fw||1,free:1,anchor:st.anchor})}
   return out}
@@ -439,65 +441,8 @@ function holeRect(W,H){if(innerWidth<=760)return null;var sr=$.stage.getBounding
 // Each part gets its own power diagram; stones are shared out by weight so the band holds a fair slice.
 // horizontal room inside a polygon at height y around x
 function chord(P,x,y){var L=-1e9,Rr=1e9;for(var i=0;i<P.length;i++){var a=P[i],b=P[(i+1)%P.length];if((a[1]>y)!=(b[1]>y)){var X=a[0]+(y-a[1])/(b[1]-a[1])*(b[0]-a[0]);if(X<=x)L=Math.max(L,X);else Rr=Math.min(Rr,X)}}return Rr-L}
-/* v3z: a reserved square in the garden's bottom-right, large enough for a
-   thumb (at least 44px). Stones are kept out of it by a diagonal half-plane
-   so their weight never covers the sand-ring. */
-function moreSlot(W,H,M0,mob){
-  var pad=mob?8:12, roomW=Math.max(44,W-2*M0-pad), roomH=Math.max(44,H-2*M0-pad);
-  var s=Math.max(44,Math.min(mob?96:112,roomW*.36,roomH*.36));
-  if(s>roomW)s=roomW;if(s>roomH)s=roomH;
-  var x1=W-M0-pad,y1=H-M0-pad;
-  return {x0:x1-s,y0:y1-s,x1:x1,y1:y1,s:s};
-}
-function holdBR(bound,slot,gap){
-  if(!slot||!bound||!bound.length||!G.cutBR)return bound;
-  var g=gap==null?16:gap;
-  return G.cutBR(bound,slot.x0-g,slot.y0-g);
-}
-/* After layout (and again after the stone is bulged) bite any intrusion out
-   of the reserved square, leaving a little air for rounding and bulge. */
-function clipCells(cells,slot,gap){
-  if(!slot||!cells||!G.cutBR)return cells;
-  var g=gap==null?16:gap,x0=slot.x0-g,y0=slot.y0-g;
-  return cells.map(function(cell){
-    if(!cell||!cell.poly||(cell.item&&cell.item.more))return cell;
-    var p=G.cutBR(cell.poly,x0,y0);
-    if(p&&p.length>=3){cell.poly=p;cell.area=Math.abs(G.area(p));if(cell.area>4)cell.c=G.centroid(p)}
-    return cell;
-  }).filter(function(cell){return !cell.item||cell.item.more||(cell.area||0)>4});
-}
-/* v3z1: a low, flat river pebble in the same drawing vocabulary as the
-   garden stones (harmonic outline, then the usual bulge + path rounding
-   and inset rake rings). Phases are fixed constants, not Math.random,
-   so the shape is stable across renders and folders. */
-function morePoly(slot,mob){
-  /* Fill most of the reserved corner — a low, slightly squat pebble, same
-     visual weight as the old square patch, but an irregular river-stone
-     outline. Soft harmonics (in the sliver vocabulary), no pinched waist. */
-  var pad=mob?3:4, aw=slot.s-pad*2, ah=slot.s-pad*2;
-  if(aw<44||ah<44){aw=Math.max(44,aw);ah=Math.max(44,ah)}
-  var cx=slot.x0+pad+aw*.54, cy=slot.y0+pad+ah*.55;
-  var rx=aw*.50, ry=ah*.455, rot=-0.17, n=12, p=[], i;
-  for(i=0;i<n;i++){
-    var a=i/n*Math.PI*2;
-    var h=1+.09*Math.sin(2*a+0.55)+.07*Math.cos(3*a+2.05)+.035*Math.sin(5*a+1.1)+.018*Math.cos(4*a+1.7);
-    var x=Math.cos(a)*rx*h, y=Math.sin(a)*ry*h;
-    var co=Math.cos(rot), si=Math.sin(rot);
-    p.push([cx+x*co-y*si, cy+x*si+y*co]);
-  }
-  var bb=G.bbox(p), pw=bb[2]-bb[0], ph=bb[3]-bb[1];
-  var fit=Math.min((slot.x1-slot.x0-pad*2)/pw,(slot.y1-slot.y0-pad*2)/ph,1);
-  if(fit<0.999){
-    var cc=[(bb[0]+bb[2])/2,(bb[1]+bb[3])/2];
-    /* after shrinking, nudge back toward the corner (thumb reach) */
-    var nx=slot.x1-pad-(bb[2]-cc[0])*fit, ny=slot.y1-pad-(bb[3]-cc[1])*fit;
-    p=p.map(function(q){return [nx+(q[0]-cc[0])*fit,ny+(q[1]-cc[1])*fit]});
-  }
-  return p;
-}
-/* Rake lines: true inward offsets of the pebble (same as G.rings), with a
-   quiet, seeded ripple so they feel hand-raked rather than compass-drawn.
-   The phase is shared across rings so the grooves stay roughly parallel. */
+/* Rake lines follow a cell's own outline (true inward offsets), with a
+   quiet shared-phase ripple so they feel hand-raked rather than compass-drawn. */
 function rakeRings(p,step,maxn,amt){
   var Rs=G.rings(p,step,0,maxn), c=G.centroid(p), a0=0.62, n=Rs.rings.length;
   return Rs.rings.map(function(q,j){
@@ -509,44 +454,23 @@ function rakeRings(p,step,maxn,amt){
     });
   });
 }
-function moreBox(poly){
-  if(!poly||poly.length<3)return null;
-  var bb=G.bbox(poly);
-  return {x0:bb[0],y0:bb[1],x1:bb[2],y1:bb[3],s:Math.max(bb[2]-bb[0],bb[3]-bb[1])};
-}
-function placeMore(cells,rest,slot,mob,mpoly){
-  st.moreSlot=slot||null;
-  cells=clipCells(cells||[],slot,mob?16:20);
-  if(!rest||!slot)return cells;
-  var poly=(mpoly&&mpoly.length>=3)?mpoly:(slot.poly&&slot.poly.length>=3?slot.poly:null);
-  if(!poly||poly.length<3)return cells;
-  var bb=G.bbox(poly);
-  cells.push({item:{key:'more',more:rest},poly:poly,area:Math.abs(G.area(poly)),c:[(bb[0]+bb[2])/2,(bb[1]+bb[3])/2]});
-  return cells;
-}
 function fieldLayout(it,W,H,M0,hole,mob){var R=mob?22:34,iter=it.length>40?80:120;st.band=null;st.moreSlot=null;
-  var rest=st.moreRest||0,slot0=rest?moreSlot(W,H,M0,mob):null,mpoly=slot0?morePoly(slot0,mob):null;
-  /* L-shaped clearance follows the pebble's box, not a larger unused square. */
-  var slot=mpoly?moreBox(mpoly):slot0;
-  if(slot&&slot0){slot.s=slot0.s;slot.poly=mpoly}
-  var g=mob?16:20;
-  if(!hole||hole[3]>H-60){var x0=hole?hole[2]:M0;return placeMore(G.layout(it,holdBR(G.roundRect(x0,M0,W-M0-x0,H-2*M0,R),slot,g),{seed:st.path,iter:iter,corner:[x0+2,M0+2]}),rest,slot,mob,mpoly)}
+  if(!hole||hole[3]>H-60){var x0=hole?hole[2]:M0;return G.layout(it,G.roundRect(x0,M0,W-M0-x0,H-2*M0,R),{seed:st.path,iter:iter,corner:[x0+2,M0+2]})}
   var X=hole[2],Y=hole[3],B=H-M0,bh=B-Y,bw=X-M0;
   // the strip under the column: real stones sit in a fan-shaped patch toward the field (top edge rising to
   // the right, left edge leaning in); the rest is negative space with a few ghost pebbles, sparser to the left.
   var cutX=bw*.34,lead=Math.min(bh*.5,70);
   var bp=[[M0+cutX,Y+lead],[M0+cutX+bw*.22,Y+lead*.28],[X,Y],[X,B],[M0+cutX*.7,B]];
   var ab=Math.abs(G.area(bp)),a1=(W-M0-X)*(H-2*M0),tot=it.reduce(function(a,o){return a+o.weight},0),want=tot*ab/(a1+ab);
-  var big=it.slice().sort(function(a,b){return b.weight-a.weight})[0],cand=it.filter(function(o){return !o.free&&o!==big}).sort(function(a,b){return (G.hash(a.key+'|b')%997)-(G.hash(b.key+'|b')%997)});
+  var big=it.slice().sort(function(a,b){return b.weight-a.weight})[0],cand=it.filter(function(o){return !o.free&&!o.more&&o!==big}).sort(function(a,b){return (G.hash(a.key+'|b')%997)-(G.hash(b.key+'|b')%997)});
   var two=[],w2=0;cand.forEach(function(o){if(w2+o.weight<=want*1.12){two.push(o);w2+=o.weight}});
   if(!two.length&&cand.length>=2){var sm=cand.slice().sort(function(a,b){return a.weight-b.weight})[0];two.push(sm);w2=sm.weight}
-  if(!two.length||it.length-two.length<2||bh<80){return placeMore(G.layout(it,holdBR(G.roundRect(X,M0,W-M0-X,H-2*M0,R),slot,g),{seed:st.path,iter:iter,corner:[X+2,M0+2]}),rest,slot,mob,mpoly)}
+  if(!two.length||it.length-two.length<2||bh<80){return G.layout(it,G.roundRect(X,M0,W-M0-X,H-2*M0,R),{seed:st.path,iter:iter,corner:[X+2,M0+2]})}
   var one=it.filter(function(o){return two.indexOf(o)<0});
   // keep sizes honest: if the band stones weigh less than their share, pull the patch's left edge in
   if(w2<want*.9){var f=Math.max(.45,w2/want),nx=X-(X-(M0+cutX*.7))*f;bp=[[Math.max(nx,M0+cutX*.7),Y+lead],[Math.max(nx,M0+cutX*.7)+bw*.2*f,Y+lead*.28],[X,Y],[X,B],[Math.max(nx-cutX*.6*f,M0+cutX*.7),B]]}
-  var c1=G.layout(one,holdBR(G.roundRect(X,M0,W-M0-X,H-2*M0,R),slot,g),{seed:st.path,iter:iter,corner:[X+2,M0+2]}),c2=G.layout(two,bp,{seed:st.path+'|band',iter:iter});
-  st.band={x0:M0,y0:Y,x1:X,y1:B,poly:bp};st.hole2=[-1e4,-1e4,X,Y];return placeMore(c1.concat(c2),rest,slot,mob,mpoly)}
-// koi pond in the Free pebble (pinned in the corner): tap the water to scatter the koi; it never navigates
+  var c1=G.layout(one,G.roundRect(X,M0,W-M0-X,H-2*M0,R),{seed:st.path,iter:iter,corner:[X+2,M0+2]}),c2=G.layout(two,bp,{seed:st.path+'|band',iter:iter});
+  st.band={x0:M0,y0:Y,x1:X,y1:B,poly:bp};st.hole2=[-1e4,-1e4,X,Y];return c1.concat(c2)}
 function pondUp(cells){if(!window.NagiKoi)return;var best=null;cells.forEach(function(c){if(c.d&&c.item.free)best=c});
   if(!best||best.area<9000||best.pr<34||root.classList.contains('off')){NagiKoi.hide();st.pond=null;return}
   st.pond=best;var gfree=$.zoom.querySelector('.cell[data-i="'+best.idx+'"]');if(gfree)gfree.classList.add('pondc');var pts=best.pb.map(function(v){return [v[0],v[1]]});NagiKoi.show($.stage,{poly:pts},{d:best.d,key:st.path+'|'+best.item.path,before:$.lbs,theme:root,interactive:true,avoid:best.c?[best.c[0],best.c[1],Math.min(70,Math.max(34,best.pr*.42))]:null});
@@ -637,7 +561,6 @@ function render(anim){if(!st.data)return;if(!st.data.all)st.data.all=st.data.ite
     var pl1=G.pole(poly),ar=Math.abs(G.area(poly));c.sliver=false;
     if(!o.more&&(pl1.r<6||(pl1.r<24&&ar/(pl1.r*pl1.r)>14))){c.sliver=true;var rr=Math.max(5,Math.min(pl1.r*1.05,22));poly=[];for(var e=0;e<10;e++){var an=e/10*Math.PI*2;poly.push([pl1.x+Math.cos(an)*rr*(1+.08*Math.sin(an*2+(G.hash(o.key||'')%7))),pl1.y+Math.sin(an)*rr*(.92+.08*Math.cos(an*3))])}}
     var hk=G.hash(o.key||''),rad=G.prad(poly,hk),pb=c.sliver?poly:G.bulge(poly,null,null,outer);
-    if(st.moreSlot&&!o.more&&!c.sliver&&G.cutBR){var cut=G.cutBR(pb,st.moreSlot.x0-(mob?10:12),st.moreSlot.y0-(mob?10:12));if(cut&&cut.length>=3){var ins=G.inset(cut,4);pb=ins&&ins.length>=3?ins:cut}}
     var d=G.path(pb,c.sliver?rr*.9:rad);c.ipoly=poly;c.d=d;c.pb=pb;c.pr=pl1.r;
     c.item.path=x?x.path:o.key;
     var tn=o.free||o.up||o.more?0:toneOf(x),dk=tn==1||tn==2;
@@ -762,28 +685,83 @@ function lbOpen(list,i){st.lb={list:list,i:i||0};$.lbx.classList.add('on');if(li
    the next swipe can paint at once. Hover and touchstart on a visible
    image warm its preview before the viewer opens. Originals are never
    prefetched; Download stays ?dl. */
-function lbShow(){var x=st.lb.list[st.lb.i],gen=(lbShow.g=(lbShow.g||0)+1),prev=A.thumb?A.thumb(x,'preview'):null,src=prev||A.url(x);
+/* v3z2: a 3-slot filmstrip (prev, current, next). Each slot holds a real
+   <img> already pointing at a decoded wf3, or the garden's tiny thumb
+   blurred-up until that decode finishes — never a blank. The finger drags
+   the strip, so the next photo is on screen mid-swipe. Originals are never
+   fetched here; Download stays ?dl. */
+function lbSlot(slot,x,rise){
+  var kind=slot.classList.contains('prev')?'prev':slot.classList.contains('next')?'next':'cur';
+  slot.innerHTML='';slot.className='slot '+kind;
+  if(!x){slot.classList.add('empty');return}
+  var u=wf3url(x),hit=u&&wf3get(u),th=thUrl(x),gen=st.lb&&st.lb.gen;
+  function putWf(src,fromCache){
+    if(!slot.isConnected||(st.lb&&st.lb.gen!==gen))return;
+    if(slot.querySelector('img.wf'))return;
+    var im=new Image();
+    im.alt=x.name;im.decoding='async';
+    im.className='wf'+(rise?'':' norise');
+    function show(){
+      if(!slot.isConnected||(st.lb&&st.lb.gen!==gen))return;
+      if(slot.querySelector('img.wf'))return;
+      var hasPh=!!slot.querySelector('img.ph');
+      if(!hasPh)im.classList.add('on');
+      slot.appendChild(im);
+      if(hasPh)requestAnimationFrame(function(){im.classList.add('on')});
+      if(hasPh)setTimeout(function(){var p=slot.querySelector('img.ph');if(p)p.remove()},280);
+    }
+    function go(){if(im.decode)im.decode().then(show,show);else show()}
+    im.onerror=function(){var s=im.getAttribute('src')||'';if(/[?&]th=w/.test(s)){im.onerror=function(){};im.src=s.replace('th=w','th=j')}};
+    if(fromCache&&im){im.onload=null;im.src=src;if(im.complete&&im.naturalWidth)go();else im.onload=go;return}
+    im.onload=go;im.src=src;
+  }
+  if(hit){putWf(hit.src,true);return}
+  if(th){
+    var ph=new Image();ph.alt='';ph.className='ph norise';
+    ph.onerror=function(){var s=ph.getAttribute('src')||'';if(/[?&]th=w/.test(s)){ph.onerror=null;ph.src=s.replace('th=w','th=j')}};
+    ph.src=th;slot.appendChild(ph);
+  }
+  if(u)wf3ready(u,function(img){putWf(img.src,true)});
+  else if(!th&&x&&kind==='cur'){var im=new Image();im.alt=x.name;im.className='wf on'+(rise?'':' norise');im.src=A.url(x);slot.appendChild(im)}
+}
+function lbStrip(){
+  var box=$.lbx.querySelector('.im'),strip=box&&box.querySelector('.strip');
+  if(!box)return null;
+  if(!strip){box.innerHTML='';strip=document.createElement('div');strip.className='strip';box.appendChild(strip)}
+  return strip;
+}
+function lbShow(){
+  if(!st.lb)return;
+  var list=st.lb.list,i=st.lb.i,x=list[i],gen=(lbShow.g=(lbShow.g||0)+1);
   st.lb.gen=gen;
   var noRise=!!st.lb.noRise;st.lb.noRise=0;
-  var hit=prev&&wf3get(src);
-  var im=document.createElement('img');
-  im.alt=x.name;im.decoding='async';if(noRise)im.className='norise';
-  im.src=hit?hit.src:src;
-  $.lbx.querySelector('.im').innerHTML='';$.lbx.querySelector('.im').appendChild(im);
-  $.lbx.querySelector('.cap').innerHTML='<span><b>'+esc(x.name)+'</b><button class="ib sm dl" type="button" aria-label="Download full size" title="Download full size (⇧S)">'+ic('download')+'<span>Download</span></button>'+fs(x.size)+' · '+esc(rel(x.ts))+'</span><span>'+(st.lb.i+1)+' of '+st.lb.list.length+'</span>';
+  var strip=lbStrip();if(!strip)return;
+  strip.innerHTML='<div class="slot prev"></div><div class="slot cur"></div><div class="slot next"></div>';
+  /* paint neighbours first so their imgs are in the DOM before a swipe starts */
+  lbPreload(list,i);
+  lbSlot(strip.querySelector('.prev'),list[i-1],false);
+  lbSlot(strip.querySelector('.cur'),x,!noRise);
+  lbSlot(strip.querySelector('.next'),list[i+1],false);
+  strip.style.transition='none';strip.classList.remove('drag','snap');
+  strip.style.transform='translate3d(-33.333%,0,0)';
+  $.lbx.querySelector('.cap').innerHTML='<span><b>'+esc(x.name)+'</b><button class="ib sm dl" type="button" aria-label="Download full size" title="Download full size (⇧S)">'+ic('download')+'<span>Download</span></button>'+fs(x.size)+' · '+esc(rel(x.ts))+'</span><span>'+(i+1)+' of '+list.length+'</span>';
   $.lbx.querySelector('.cap .dl').onclick=function(){download([x])};
-  im.onerror=function(){if(!st.lb||st.lb.gen!==gen)return;var s=im.getAttribute('src')||'';
-    if(/[?&]th=w/.test(s)){im.src=s.replace('th=w','th=j');return}
-    if(prev&&s!==A.url(x)){im.src=A.url(x)}};
-  if(prev&&!hit&&im.decode)im.decode().then(function(){},function(){});
-  lbPreload(st.lb.list,st.lb.i);
-  $.lbx.querySelector('.p').style.visibility=st.lb.i>0?'':'hidden';$.lbx.querySelector('.n').style.visibility=st.lb.i<st.lb.list.length-1?'':'hidden'}
+  $.lbx.querySelector('.p').style.visibility=i>0?'':'hidden';$.lbx.querySelector('.n').style.visibility=i<list.length-1?'':'hidden'}
 function lbStep(d){if(!st.lb)return;var n=st.lb.i+d;if(n<0||n>=st.lb.list.length)return;st.lb.i=n;wf3.dir=d;lbShow()}
 /* v3z preview cache: at most 8 decoded wf3 bitmaps, 2 fetches at a time. */
-var wf3={map:Object.create(null),ord:[],q:[],busy:0,gen:0,dir:1,MAX:8,CONCUR:2};
+var wf3={map:Object.create(null),ord:[],q:[],busy:0,gen:0,dir:1,MAX:8,CONCUR:2,wait:Object.create(null)};
 function wf3url(x){return (x&&!x.isDir&&x.type=='image'&&A.thumb)?A.thumb(x,'preview'):null}
 function wf3get(u){var e=u&&wf3.map[u];return (e&&e.ready&&e.img)?e.img:null}
-function wf3clear(){wf3.q=[];wf3.gen++;Object.keys(wf3.map).forEach(function(u){var e=wf3.map[u];if(e&&e.img){e.abort=1;try{e.img.onload=e.img.onerror=null;if(e.loading)e.img.src=''}catch(_){}}});wf3.map=Object.create(null);wf3.ord=[];wf3.busy=0}
+function wf3ready(u,fn){
+  if(!u||!fn)return;
+  var e=wf3.map[u];
+  if(e&&e.ready&&e.img){fn(e.img);return}
+  (wf3.wait[u]=wf3.wait[u]||[]).push(fn);
+  e=wf3.map[u];
+  if(e&&e.ready&&e.img){var ws=wf3.wait[u];delete wf3.wait[u];ws.forEach(function(f){try{f(e.img)}catch(_){}})}
+}
+function thUrl(x){return (x&&!x.isDir&&x.type=='image'&&A.thumb)?A.thumb(x):null}
+function wf3clear(){wf3.q=[];wf3.gen++;wf3.wait=Object.create(null);Object.keys(wf3.map).forEach(function(u){var e=wf3.map[u];if(e&&e.img){e.abort=1;try{e.img.onload=e.img.onerror=null;if(e.loading)e.img.src=''}catch(_){}}});wf3.map=Object.create(null);wf3.ord=[];wf3.busy=0}
 function wf3trim(){
   while(wf3.ord.length>wf3.MAX){
     var drop=-1;for(var i=0;i<wf3.ord.length;i++){var e=wf3.map[wf3.ord[i]];if(e&&!e.loading){drop=i;break}}
@@ -815,7 +793,7 @@ function wf3fetch(u){
   function fin(ok){
     e.loading=false;
     if(e.abort){if(wf3.map[u]===e)delete wf3.map[u]}
-    else if(ok){e.ready=true;var i=wf3.ord.indexOf(u);if(i>=0)wf3.ord.splice(i,1);wf3.ord.push(u);wf3trim()}
+    else if(ok){e.ready=true;var i=wf3.ord.indexOf(u);if(i>=0)wf3.ord.splice(i,1);wf3.ord.push(u);wf3trim();var ws=wf3.wait[u];if(ws){delete wf3.wait[u];ws.forEach(function(fn){try{fn(e.img)}catch(_){}})}}
     else if(wf3.map[u]===e)delete wf3.map[u];
     wf3.busy=Math.max(0,wf3.busy-1);
     wf3pump();
@@ -873,43 +851,46 @@ function lbSet(x){
    ignored so the pinch-zoom block is left alone. Neighbour previews only;
    the original is never fetched. Desktop keeps the arrow keys. */
 function lbSwipe(){
-  var s=null,eat=false,W=function(){return ($.lbx&&$.lbx.clientWidth)||innerWidth};
-  function img(){return $.lbx.querySelector('.im img')}
-  function reset(el){if(!el)return;el.style.transition='';el.style.transform='';el.classList.remove('drag','snap')}
+  var s=null,eat=false;
+  function pane(){var im=$.lbx&&$.lbx.querySelector('.im');return (im&&im.clientWidth)||innerWidth}
+  function strip(){return $.lbx&&$.lbx.querySelector('.im .strip')}
+  function reset(el,home){if(!el)return;el.style.transition='';el.classList.remove('drag','snap');el.style.transform='translate3d('+(home!=null?home:-pane())+'px,0,0)'}
   function onDown(e){
     if(!st.lb||!$.lbx.classList.contains('on'))return;
     if(e.pointerType==='mouse'||(e.button!=null&&e.button>0)||e.isPrimary===false)return;
     if(e.target.closest&&e.target.closest('.nav,.x,.cap,button,.dl'))return;
-    var el=img();if(!el)return;
-    s={x:e.clientX,y:e.clientY,t:Date.now(),el:el,moved:false,dx:0,pid:e.pointerId};
+    var el=strip();if(!el)return;
+    var W=pane();
+    s={x:e.clientX,y:e.clientY,t:Date.now(),el:el,moved:false,dx:0,pid:e.pointerId,W:W,base:-W};
+    el.style.transition='none';el.style.transform='translate3d('+(-W)+'px,0,0)';
     try{$.lbx.setPointerCapture(e.pointerId)}catch(_){}
   }
   function onMove(e){
     if(!s||s.pid!==e.pointerId)return;
     var dx=e.clientX-s.x,dy=e.clientY-s.y;
-    if(!s.moved){if(Math.abs(dx)<8&&Math.abs(dy)<8)return;if(Math.abs(dy)>Math.abs(dx)){s=null;return}s.moved=true;s.el.classList.add('drag');s.el.style.animation='none';s.el.style.transition='none'}
+    if(!s.moved){if(Math.abs(dx)<8&&Math.abs(dy)<8)return;if(Math.abs(dy)>Math.abs(dx)){s=null;return}s.moved=true;s.el.classList.add('drag');s.el.style.transition='none'}
     if(e.cancelable)try{e.preventDefault()}catch(_){}
     var atEnd=(dx>0&&st.lb.i===0)||(dx<0&&st.lb.i===st.lb.list.length-1);
     s.dx=atEnd?dx*.28:dx;
-    s.el.style.transform='translate3d('+s.dx+'px,0,0)';
+    s.el.style.transform='translate3d('+(s.base+s.dx)+'px,0,0)';
   }
   function onEnd(e){
     if(!s||(e&&s.pid!==e.pointerId))return;
-    var D=s;s=null;var el=D.el,dx=D.dx,dt=Math.max(1,Date.now()-D.t),v=dx/dt;
-    if(!D.moved){reset(el);return}
+    var D=s;s=null;var el=D.el,dx=D.dx,dt=Math.max(1,Date.now()-D.t),v=dx/dt,W=D.W||pane();
+    if(!D.moved){reset(el,-W);return}
     eat=true;setTimeout(function(){eat=false},350);
     var dir=(Math.abs(dx)>56||Math.abs(v)>.35)?(dx<0?1:-1):0;
     var can=dir&&st.lb&&st.lb.i+dir>=0&&st.lb.i+dir<st.lb.list.length;
     function snap(to,done){
-      if(RM){if(done)done();reset(el);return}
+      if(RM){if(done)done();reset(el,-W);return}
       el.classList.remove('drag');el.classList.add('snap');
-      el.style.animation='none';
       el.style.transition='transform .32s cubic-bezier(.2,.8,.2,1)';
       el.style.transform='translate3d('+to+'px,0,0)';
-      setTimeout(function(){if(done)done();reset(el)},330);
+      setTimeout(function(){if(done)done();else reset(el,-W)},330);
     }
-    if(can)snap((dir>0?-1:1)*W(),function(){if(st.lb){st.lb.noRise=1;lbStep(dir)}});
-    else snap(0);
+    /* snap the whole strip so the neighbour that was already on screen lands in the middle */
+    if(can)snap(dir>0?-2*W:0,function(){if(st.lb){st.lb.noRise=1;lbStep(dir)}});
+    else snap(-W);
   }
   $.lbx.addEventListener('pointerdown',onDown);
   $.lbx.addEventListener('pointermove',onMove);
