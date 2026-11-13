@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Build the Nagi theme. Minifies, subsets icons, versions asset URLs for long-term caching."""
-import hashlib, json, pathlib, re, shutil, subprocess, sys, gzip
+import hashlib, json, os, pathlib, re, shutil, subprocess, sys, gzip
 from urllib.parse import quote
 
 S = pathlib.Path(__file__).parent
@@ -339,6 +339,46 @@ def write_run_local(hashes: dict):
     # also write a small hashes file (no secrets) for README / operators
     (O / 'hashes.json').write_text(json.dumps(hashes, indent=2) + '\n')
 
+
+GZ_EXTS = {'.js', '.css', '.svg', '.json'}
+
+def write_gz_siblings(root: pathlib.Path) -> dict:
+    """Precompressed <file>.gz next to every js, css, svg, json and manifest.
+    Launch PNGs and fonts are left alone. Uses zopfli if it is on PATH,
+    otherwise gzip -9 (mtime 0, reproducible). Never compresses on the fly
+    at request time — copyparty only serves these siblings if a small
+    1.20.26 patch is applied (see bin/apply-copyparty-patch.sh)."""
+    written = {}
+    zopfli = shutil.which('zopfli')
+    # only files directly in theme/ (and any subdir that is not launch/ or fonts/)
+    for path in sorted(root.rglob('*')):
+        if not path.is_file():
+            continue
+        rel = path.relative_to(root).as_posix()
+        if rel.startswith('launch/') or rel.startswith('fonts/'):
+            continue
+        if path.suffix == '.gz':
+            continue
+        if path.suffix.lower() not in GZ_EXTS and path.name != 'manifest':
+            continue
+        data = path.read_bytes()
+        dest = path.with_name(path.name + '.gz')
+        if zopfli:
+            tmp = dest.with_name(dest.name + '.tmp')
+            subprocess.run([zopfli, '--gzip', '-c', str(path)], check=True, stdout=open(tmp, 'wb'))
+            tmp.replace(dest)
+        else:
+            # gzip -9, no filename/mtime in the header so the bytes are stable
+            with open(dest, 'wb') as raw:
+                with gzip.GzipFile(filename='', mode='wb', fileobj=raw, compresslevel=9, mtime=0) as gz:
+                    gz.write(data)
+        # make the sibling at least as new as the source (the server checks this)
+        src_m = path.stat().st_mtime
+        if dest.stat().st_mtime < src_m:
+            os.utime(dest, (src_m, src_m))
+        written[rel + '.gz'] = dest.stat().st_size
+    return written
+
 def build():
     names = used_icons()
     icss = icons_css(names)
@@ -385,6 +425,7 @@ def build():
     _, lh = launch_catalog()
     hashes.update({'launch/'+k: v for k,v in lh.items()})
     write_run_local(hashes)
+    gz = write_gz_siblings(O)
 
     # mockup (keep readable-enough; minify css/js to keep the file smaller)
     fonts = fcss.replace('/.nagi/fonts/', '../theme/fonts/')
@@ -401,7 +442,7 @@ def build():
     (D/'login.html').write_text(lg.replace('/*CSS*/', minify_css(fonts + icss + pages_base + '\n' + pwa_css)).replace('/*JS*/', minify_js(pwa_js+'\n'+r(S/'garden.js')+'\n'+r(S/'pages.js'))))
 
     sizes = {p.name: p.stat().st_size for p in list(O.glob('nagi*')) + list((O/'fonts').glob('*.woff2'))}
-    print('built', sizes, 'icons', len(names), 'hashes', hashes)
+    print('built', sizes, 'icons', len(names), 'hashes', hashes, 'gz', gz)
 
 if __name__ == '__main__':
     build()

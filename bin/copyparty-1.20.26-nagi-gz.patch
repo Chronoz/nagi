@@ -1,0 +1,41 @@
+# Nagi gzip sibling serving for copyparty 1.20.26
+# Applies to site-packages/copyparty/httpcli.py
+# Use bin/apply-copyparty-patch.sh (idempotent; refuses if upstream changed).
+#
+--- httpcli.py
++++ httpcli.py
+@@ -4895,5 +4895,33 @@
+-            if not self.vpath.startswith(".cpr/"):
++            # nagi-gz: also look for a precompressed sibling under /.nagi/
++            if not self.vpath.startswith(".cpr/") and not self.vpath.startswith(".nagi/"):
+                 break
+ 
+         if not editions:
+             return self.tx_404()
++
++        # nagi-gz: serve the .gz sibling only when it is at least as new as
++        # the source, the client accepts gzip, and this is not a Range
++        # request. Never compress or decompress on the fly. Always Vary.
++        if self.vpath.startswith(".nagi/"):
++            _nagi_ae = self.headers.get("accept-encoding", "").lower()
++            _nagi_vary = self.out_headers.get("Vary", "")
++            if "Accept-Encoding" not in _nagi_vary:
++                self.out_headers["Vary"] = (
++                    (_nagi_vary + ", Accept-Encoding") if _nagi_vary else "Accept-Encoding"
++                )
++            if ".gz" in editions:
++                _drop = False
++                if "gzip" not in _nagi_ae:
++                    _drop = True
++                elif self.headers.get("range"):
++                    _drop = True
++                elif "plain" in editions:
++                    try:
++                        if bos.stat(editions[".gz"][0]).st_mtime < bos.stat(
++                            editions["plain"][0]
++                        ).st_mtime:
++                            _drop = True
++                    except Exception:
++                        _drop = True
++                if _drop:
++                    del editions[".gz"]
