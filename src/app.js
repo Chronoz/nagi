@@ -89,9 +89,10 @@ function build(){
   $.chk.addEventListener('dblclick',function(e){
     var r=e.target.closest('.row[data-p]');if(!r)return;
     var x=find(r.dataset.p);if(x)open(x)});
+  $.chk.addEventListener('pointerdown',function(e){var r=e.target.closest('.row[data-p]');var x=r&&find(r.dataset.p);if(x)wf3warm(x)},{passive:true});
   $.chk.addEventListener('mouseover',function(e){
     var r=e.target.closest('.row[data-p]');if(!r||(e.relatedTarget&&r.contains(e.relatedTarget)))return;
-    var x=find(r.dataset.p);if(x)hl(x.path,1)});
+    var x=find(r.dataset.p);if(x){hl(x.path,1);wf3warm(x)}});
   $.chk.addEventListener('mouseout',function(e){
     var r=e.target.closest('.row[data-p]');if(!r||(e.relatedTarget&&r.contains(e.relatedTarget)))return;
     var x=find(r.dataset.p);if(x)hl(x.path,0)});
@@ -132,7 +133,7 @@ function memSave(){
   MEM[memKey(st.path)]={t:Date.now(),data:st.data,view:st.view,scroll:snapScroll(),acct:A.user||'*',sk:sizeKey(),garden:garden};
   var ks=Object.keys(MEM);if(ks.length>MEMN){ks.sort(function(a,b){return MEM[a].t-MEM[b].t});for(var i=0;i<ks.length-MEMN;i++)delete MEM[ks[i]]}}
 function memGet(p){var e=MEM[memKey(p)];return e&&e.data?e:null}
-function memClear(){MEM={}}
+function memClear(){MEM={};wf3clear()}
 function memInvalidate(path){if(!path){MEM={};return}Object.keys(MEM).forEach(function(k){var p=k.split('\0')[0];if(p===path||p.indexOf(path)===0||path.indexOf(p)===0)delete MEM[k]})}
 function listingSig(d){if(!d)return '';var all=d.all||d.items||[],bits=[d.acct||'',String(d.free||''),all.length];for(var i=0;i<all.length;i++){var x=all[i];bits.push(x.path,x.size||0,x.ts||0,x.count!=null?x.count:'',x.dom||'')}return bits.join('\t')}
 function sameFolder(a,b){return (a||'/').replace(/\/$/,'')===(b||'/').replace(/\/$/,'')}
@@ -420,11 +421,14 @@ function ageTones(list){st.age=null;var k={};list.forEach(function(x){k[x.isDir?
 function items(){var d=st.data,list=d.items.slice(),out=[],sum=0,mx=0,cap=innerWidth<=760?8:20;
   /* v3x: at most 8 stones on a narrow screen, 20 on a wider one. Keep the
      heaviest items (same size-weight as the garden already used; folders
-     first on a tie). The last slot is a quiet "+N more" when anything is hidden. */
+     first on a tie). v3z: when anything is hidden, a quiet "+N" sand-ring
+     is reserved in the bottom-right corner, not packed as a stone. */
   list.sort(function(a,b){var wa=Math.pow((a.size||0)+1,.62),wb=Math.pow((b.size||0)+1,.62);return (wb-wa)||((b.isDir?1:0)-(a.isDir?1:0))||(a.name||'').localeCompare(b.name||'')});
   var rest=0;if(list.length>cap){rest=list.length-(cap-1);list=list.slice(0,cap-1)}
   list.forEach(function(x){var w=Math.pow((x.size||0)+1,.62);mx=Math.max(mx,w);out.push({key:x.path,weight:w,x:x});sum+=w});
-  if(rest){var mw=Math.max(mx*.14,sum/(out.length||1)*.4,1);out.push({key:'more',weight:mw,more:rest})}
+  /* v3z: the +N sand-ring is not a stone in the diagram. It is parked in
+     the bottom-right corner after layout, so weight never moves it. */
+  st.moreRest=rest;
   var n=out.length,floor=Math.max(sum*(n>24?.0045:.012),mx*.012,1);out.forEach(function(o){o.weight=Math.max(o.weight,floor)});sum=out.reduce(function(a,o){return a+o.weight},0);
   st.ups.filter(function(u){return u.dir==st.path&&u.state!='ok'}).forEach(function(u){if(list.some(function(x){return x.name==u.name}))return;var w=Math.max(Math.pow(u.size+1,.62),floor);out.push({key:'up:'+u.name,weight:w,up:u});sum+=w});
   if(st.path=='/'&&d.free!=null){var fw=Math.min(sum*.5,Math.max(sum*.3,Math.pow(d.free,.62)));out.push({key:'free',weight:fw||1,free:1,anchor:st.anchor})}
@@ -435,8 +439,51 @@ function holeRect(W,H){if(innerWidth<=760)return null;var sr=$.stage.getBounding
 // Each part gets its own power diagram; stones are shared out by weight so the band holds a fair slice.
 // horizontal room inside a polygon at height y around x
 function chord(P,x,y){var L=-1e9,Rr=1e9;for(var i=0;i<P.length;i++){var a=P[i],b=P[(i+1)%P.length];if((a[1]>y)!=(b[1]>y)){var X=a[0]+(y-a[1])/(b[1]-a[1])*(b[0]-a[0]);if(X<=x)L=Math.max(L,X);else Rr=Math.min(Rr,X)}}return Rr-L}
-function fieldLayout(it,W,H,M0,hole,mob){var R=mob?22:34,iter=it.length>40?80:120;st.band=null;
-  if(!hole||hole[3]>H-60){var x0=hole?hole[2]:M0;return G.layout(it,G.roundRect(x0,M0,W-M0-x0,H-2*M0,R),{seed:st.path,iter:iter,corner:[x0+2,M0+2]})}
+/* v3z: a reserved square in the garden's bottom-right, large enough for a
+   thumb (at least 44px). Stones are kept out of it by a diagonal half-plane
+   so their weight never covers the sand-ring. */
+function moreSlot(W,H,M0,mob){
+  var pad=mob?8:12, roomW=Math.max(44,W-2*M0-pad), roomH=Math.max(44,H-2*M0-pad);
+  var s=Math.max(44,Math.min(mob?96:112,roomW*.36,roomH*.36));
+  if(s>roomW)s=roomW;if(s>roomH)s=roomH;
+  var x1=W-M0-pad,y1=H-M0-pad;
+  return {x0:x1-s,y0:y1-s,x1:x1,y1:y1,s:s};
+}
+function holdBR(bound,slot,gap){
+  if(!slot||!bound||!bound.length||!G.cutBR)return bound;
+  var g=gap==null?16:gap;
+  return G.cutBR(bound,slot.x0-g,slot.y0-g);
+}
+/* After layout (and again after the stone is bulged) bite any intrusion out
+   of the reserved square, leaving a little air for rounding and bulge. */
+function clipCells(cells,slot,gap){
+  if(!slot||!cells||!G.cutBR)return cells;
+  var g=gap==null?16:gap,x0=slot.x0-g,y0=slot.y0-g;
+  return cells.map(function(cell){
+    if(!cell||!cell.poly||(cell.item&&cell.item.more))return cell;
+    var p=G.cutBR(cell.poly,x0,y0);
+    if(p&&p.length>=3){cell.poly=p;cell.area=Math.abs(G.area(p));if(cell.area>4)cell.c=G.centroid(p)}
+    return cell;
+  }).filter(function(cell){return !cell.item||cell.item.more||(cell.area||0)>4});
+}
+function morePoly(slot,mob){
+  var pad=3,s=slot.s-pad*2,r=s*(mob?.32:.28);
+  var p=G.roundRect(slot.x0+pad,slot.y0+pad,s,s,r);
+  return G.bulge(p,.03,Math.max(4,s*.05),function(){return false})||p;
+}
+function placeMore(cells,rest,slot,mob){
+  st.moreSlot=slot||null;
+  cells=clipCells(cells||[],slot,mob?16:20);
+  if(!rest||!slot)return cells;
+  var poly=morePoly(slot,mob);
+  if(!poly||poly.length<3)poly=G.roundRect(slot.x0,slot.y0,slot.s,slot.s,slot.s*.28);
+  cells.push({item:{key:'more',more:rest},poly:poly,area:Math.abs(G.area(poly)),c:[(slot.x0+slot.x1)/2,(slot.y0+slot.y1)/2]});
+  return cells;
+}
+function fieldLayout(it,W,H,M0,hole,mob){var R=mob?22:34,iter=it.length>40?80:120;st.band=null;st.moreSlot=null;
+  var rest=st.moreRest||0,slot=rest?moreSlot(W,H,M0,mob):null;
+  var g=mob?16:20;
+  if(!hole||hole[3]>H-60){var x0=hole?hole[2]:M0;return placeMore(G.layout(it,holdBR(G.roundRect(x0,M0,W-M0-x0,H-2*M0,R),slot,g),{seed:st.path,iter:iter,corner:[x0+2,M0+2]}),rest,slot,mob)}
   var X=hole[2],Y=hole[3],B=H-M0,bh=B-Y,bw=X-M0;
   // the strip under the column: real stones sit in a fan-shaped patch toward the field (top edge rising to
   // the right, left edge leaning in); the rest is negative space with a few ghost pebbles, sparser to the left.
@@ -446,12 +493,12 @@ function fieldLayout(it,W,H,M0,hole,mob){var R=mob?22:34,iter=it.length>40?80:12
   var big=it.slice().sort(function(a,b){return b.weight-a.weight})[0],cand=it.filter(function(o){return !o.free&&o!==big}).sort(function(a,b){return (G.hash(a.key+'|b')%997)-(G.hash(b.key+'|b')%997)});
   var two=[],w2=0;cand.forEach(function(o){if(w2+o.weight<=want*1.12){two.push(o);w2+=o.weight}});
   if(!two.length&&cand.length>=2){var sm=cand.slice().sort(function(a,b){return a.weight-b.weight})[0];two.push(sm);w2=sm.weight}
-  if(!two.length||it.length-two.length<2||bh<80){return G.layout(it,G.roundRect(X,M0,W-M0-X,H-2*M0,R),{seed:st.path,iter:iter,corner:[X+2,M0+2]})}
+  if(!two.length||it.length-two.length<2||bh<80){return placeMore(G.layout(it,holdBR(G.roundRect(X,M0,W-M0-X,H-2*M0,R),slot,g),{seed:st.path,iter:iter,corner:[X+2,M0+2]}),rest,slot,mob)}
   var one=it.filter(function(o){return two.indexOf(o)<0});
   // keep sizes honest: if the band stones weigh less than their share, pull the patch's left edge in
   if(w2<want*.9){var f=Math.max(.45,w2/want),nx=X-(X-(M0+cutX*.7))*f;bp=[[Math.max(nx,M0+cutX*.7),Y+lead],[Math.max(nx,M0+cutX*.7)+bw*.2*f,Y+lead*.28],[X,Y],[X,B],[Math.max(nx-cutX*.6*f,M0+cutX*.7),B]]}
-  var c1=G.layout(one,G.roundRect(X,M0,W-M0-X,H-2*M0,R),{seed:st.path,iter:iter,corner:[X+2,M0+2]}),c2=G.layout(two,bp,{seed:st.path+'|band',iter:iter});
-  st.band={x0:M0,y0:Y,x1:X,y1:B,poly:bp};st.hole2=[-1e4,-1e4,X,Y];return c1.concat(c2)}
+  var c1=G.layout(one,holdBR(G.roundRect(X,M0,W-M0-X,H-2*M0,R),slot,g),{seed:st.path,iter:iter,corner:[X+2,M0+2]}),c2=G.layout(two,bp,{seed:st.path+'|band',iter:iter});
+  st.band={x0:M0,y0:Y,x1:X,y1:B,poly:bp};st.hole2=[-1e4,-1e4,X,Y];return placeMore(c1.concat(c2),rest,slot,mob)}
 // koi pond in the Free pebble (pinned in the corner): tap the water to scatter the koi; it never navigates
 function pondUp(cells){if(!window.NagiKoi)return;var best=null;cells.forEach(function(c){if(c.d&&c.item.free)best=c});
   if(!best||best.area<9000||best.pr<34||root.classList.contains('off')){NagiKoi.hide();st.pond=null;return}
@@ -542,7 +589,9 @@ function render(anim){if(!st.data)return;if(!st.data.all)st.data.all=st.data.ite
     var hz=st.hole2||hole,thr=gap/2+3,outer=function(m){if(m[0]<M0+thr||m[0]>W-M0-thr||m[1]<M0+thr||m[1]>H-M0-thr)return true;if(hz&&((Math.abs(m[0]-hz[2])<thr&&m[1]<hz[3])||(Math.abs(m[1]-hz[3])<thr&&m[0]<hz[2])))return true;if(st.band&&m[0]<st.band.x1-thr&&Math.abs(polyD(m,st.band.poly))<thr)return true;return false};
     var pl1=G.pole(poly),ar=Math.abs(G.area(poly));c.sliver=false;
     if(!o.more&&(pl1.r<6||(pl1.r<24&&ar/(pl1.r*pl1.r)>14))){c.sliver=true;var rr=Math.max(5,Math.min(pl1.r*1.05,22));poly=[];for(var e=0;e<10;e++){var an=e/10*Math.PI*2;poly.push([pl1.x+Math.cos(an)*rr*(1+.08*Math.sin(an*2+(G.hash(o.key||'')%7))),pl1.y+Math.sin(an)*rr*(.92+.08*Math.cos(an*3))])}}
-    var hk=G.hash(o.key||''),rad=G.prad(poly,hk),pb=c.sliver?poly:G.bulge(poly,null,null,outer),d=G.path(pb,c.sliver?rr*.9:rad);c.ipoly=poly;c.d=d;c.pb=pb;c.pr=pl1.r;
+    var hk=G.hash(o.key||''),rad=G.prad(poly,hk),pb=c.sliver?poly:G.bulge(poly,null,null,outer);
+    if(st.moreSlot&&!o.more&&!c.sliver&&G.cutBR){var cut=G.cutBR(pb,st.moreSlot.x0-(mob?10:12),st.moreSlot.y0-(mob?10:12));if(cut&&cut.length>=3){var ins=G.inset(cut,4);pb=ins&&ins.length>=3?ins:cut}}
+    var d=G.path(pb,c.sliver?rr*.9:rad);c.ipoly=poly;c.d=d;c.pb=pb;c.pr=pl1.r;
     c.item.path=x?x.path:o.key;
     var tn=o.free||o.up||o.more?0:toneOf(x),dk=tn==1||tn==2;
     var cls='cell t'+tn+(anim&&!RM?' in':'')+(o.up?' up':'')+(o.free?' free':'')+(o.more?' more sandc':'')+(i===sandI&&!c.sliver&&!o.more?' sandc':'');
@@ -584,10 +633,10 @@ function stageEvents(){var clickT;
   $.stage.addEventListener('mousemove',function(e){var g=e.target.closest&&e.target.closest('.cell');var c=g&&st.cells[g.dataset.i];
     if(!c){$.tip.classList.remove('on');hl(null,0);return}
     var r=$.stage.getBoundingClientRect(),x=c.item.x,o=c.item;
-    if(st.hover!==c.item.path){st.hover=c.item.path;[].forEach.call($.chk.querySelectorAll('.row'),function(rw){rw.classList.toggle('hov',rw.dataset.p==c.item.path)})}
+    if(st.hover!==c.item.path){st.hover=c.item.path;[].forEach.call($.chk.querySelectorAll('.row'),function(rw){rw.classList.toggle('hov',rw.dataset.p==c.item.path)});if(x)wf3warm(x)}
     var small=(c.r||0)<30;if(small){$.tip.innerHTML=esc(o.more?('+'+o.more+' more'):x?x.name:o.free?'Free space':o.up.name)+'<span>'+(o.more?'':(x?fs(x.size):o.free?fs(st.data.free):Math.round(o.up.pct)+'%'))+'</span>';$.tip.style.left=(e.clientX-r.left)+'px';$.tip.style.top=(e.clientY-r.top)+'px';$.tip.classList.add('on')}else $.tip.classList.remove('on')});
   $.stage.addEventListener('mouseleave',function(){$.tip.classList.remove('on');st.hover=null;[].forEach.call($.chk.querySelectorAll('.row'),function(rw){rw.classList.remove('hov')})});
-  $.stage.addEventListener('pointerdown',function(e){var g=e.target.closest&&e.target.closest('.cell');var c=g&&st.cells[g.dataset.i];if(c&&c.item.x&&c.item.x.isDir&&A.prefetch)A.prefetch(c.item.x.path)},{passive:true});
+  $.stage.addEventListener('pointerdown',function(e){var g=e.target.closest&&e.target.closest('.cell');var c=g&&st.cells[g.dataset.i];if(c&&c.item.x&&c.item.x.isDir&&A.prefetch)A.prefetch(c.item.x.path);if(c&&c.item.x)wf3warm(c.item.x)},{passive:true});
   $.stage.addEventListener('click',function(e){var g=e.target.closest&&e.target.closest('.cell');var c=g&&st.cells[g.dataset.i];if(c&&c.item.more){showRest();return}if(!c||!c.item.x){if(c&&c.item.free)toast(ic('hard-drive')+' '+fs(st.data.free)+' free of '+fs(st.data.total));return}
     var x=c.item.x;if(x.isDir&&!(e.metaKey||e.ctrlKey||e.shiftKey)){clearTimeout(clickT);return go(x.path)}
     clearTimeout(clickT);var multi=e.metaKey||e.ctrlKey||e.shiftKey;clickT=setTimeout(function(){toggleSel(x.path,false)},multi?0:190)});
@@ -630,7 +679,7 @@ function renderList(){if(window.NagiKoi)NagiKoi.hide();$.svg.style.display='none
   rows.forEach(function(x){var t=x.isDir?'folder':x.type,ar=x.tags&&(x.tags.artist||''),gx=grp(x);if(ng>1&&gx!==lastG)h+='<tr class="g"><td colspan="4"><span>'+GLAB[gx]+'</span><i>'+gs[gx]+'</i></td></tr>';lastG=gx;h+='<tr class="r" data-p="'+esc(x.path)+'"><td class="nm">'+rowIc(x)+'<span>'+esc(x.name)+'</span></td><td class="mu">'+(x.isDir?(x.count!=null?pl(x.count,'other'):'Folder'):esc(ar||t))+'</td><td class="rt">'+fs(x.size)+'</td><td class="rt">'+esc(rel(x.ts))+'</td></tr>'});
   if(!rows.length)h+='<tr><td colspan="4" class="mu" style="height:120px;text-align:center">An empty clearing. Drop files to fill it.</td></tr>';
   $.stage.appendChild(el(h+'</tbody></table></div>'));
-  [].forEach.call($.stage.querySelectorAll('tr.r'),function(r){var x=find(r.dataset.p);r.onclick=function(e){if(x.isDir&&!e.metaKey&&!e.ctrlKey)return go(x.path);if(innerWidth<=760&&!e.metaKey&&!e.ctrlKey)return open(x);toggleSel(x.path)};r.ondblclick=function(){open(x)}});bindThumbs($.stage.querySelector('.lst'),{root:$.stage.querySelector('.lst')});paintSel()}
+  [].forEach.call($.stage.querySelectorAll('tr.r'),function(r){var x=find(r.dataset.p);r.onclick=function(e){if(x.isDir&&!e.metaKey&&!e.ctrlKey)return go(x.path);if(innerWidth<=760&&!e.metaKey&&!e.ctrlKey)return open(x);toggleSel(x.path)};r.ondblclick=function(){open(x)};r.addEventListener('pointerdown',function(){if(x)wf3warm(x)},{passive:true});r.addEventListener('mouseenter',function(){if(x)wf3warm(x)})});bindThumbs($.stage.querySelector('.lst'),{root:$.stage.querySelector('.lst')});paintSel()}
 
 /* ---------- open / media ---------- */
 function open(x){if(x.isDir)return go(x.path);
@@ -654,27 +703,114 @@ au.addEventListener('ended',next);au.addEventListener('timeupdate',tick);au.addE
 function tick(){var d=au.duration||0,t=au.currentTime||0,f=d?t/d:0;$.np.querySelector('.bar i').style.width=(f*100)+'%';$.np.querySelector('.bar b').style.left=(f*100)+'%';
   $.np.querySelector('.a').textContent=dur(t);$.np.querySelector('.z').textContent=dur(d);$.np.classList.toggle('paused',au.paused);
   var b=$.np.querySelector('[data-p=toggle]');b.innerHTML=ic(au.paused?'play':'pause');root.classList.toggle('playing',!au.paused)}
-function lbOpen(list,i){st.lb={list:list,i:i||0};$.lbx.classList.add('on');lbShow();pushOv('lb')}
+function lbOpen(list,i){st.lb={list:list,i:i||0};$.lbx.classList.add('on');if(list&&list[i||0])wf3warm(list[i||0],0);lbShow();pushOv('lb')}
 /* v3w: the viewer shows ONLY a light preview (?th=wf3, uncropped, 960×768
    bound with the default --th-size). v3p stacked a cropped ?th=w3 under a
    second img that then fetched the original and faded it in — two pictures,
    and a heavy download. The original is fetched only if the file cannot be
    thumbnailed (svg, or a thumb error). Prev/next preload neighbour previews,
    never the full files. Download is a quiet "Download" for the original. */
+/* v3z: neighbours (±2 to ±3, swipe direction first) are fetched two at a
+   time, decoded with img.decode(), and kept in a small in-memory cache so
+   the next swipe can paint at once. Hover and touchstart on a visible
+   image warm its preview before the viewer opens. Originals are never
+   prefetched; Download stays ?dl. */
 function lbShow(){var x=st.lb.list[st.lb.i],gen=(lbShow.g=(lbShow.g||0)+1),prev=A.thumb?A.thumb(x,'preview'):null,src=prev||A.url(x);
   st.lb.gen=gen;
   var noRise=!!st.lb.noRise;st.lb.noRise=0;
-  $.lbx.querySelector('.im').innerHTML='<img alt="'+esc(x.name)+'" decoding="async" src="'+esc(src)+'"'+(noRise?' class="norise"':'')+'>';
+  var hit=prev&&wf3get(src);
+  var im=document.createElement('img');
+  im.alt=x.name;im.decoding='async';if(noRise)im.className='norise';
+  im.src=hit?hit.src:src;
+  $.lbx.querySelector('.im').innerHTML='';$.lbx.querySelector('.im').appendChild(im);
   $.lbx.querySelector('.cap').innerHTML='<span><b>'+esc(x.name)+'</b><button class="ib sm dl" type="button" aria-label="Download full size" title="Download full size (⇧S)">'+ic('download')+'<span>Download</span></button>'+fs(x.size)+' · '+esc(rel(x.ts))+'</span><span>'+(st.lb.i+1)+' of '+st.lb.list.length+'</span>';
   $.lbx.querySelector('.cap .dl').onclick=function(){download([x])};
-  var im=$.lbx.querySelector('.im img');
   im.onerror=function(){if(!st.lb||st.lb.gen!==gen)return;var s=im.getAttribute('src')||'';
     if(/[?&]th=w/.test(s)){im.src=s.replace('th=w','th=j');return}
     if(prev&&s!==A.url(x)){im.src=A.url(x)}};
+  if(prev&&!hit&&im.decode)im.decode().then(function(){},function(){});
   lbPreload(st.lb.list,st.lb.i);
   $.lbx.querySelector('.p').style.visibility=st.lb.i>0?'':'hidden';$.lbx.querySelector('.n').style.visibility=st.lb.i<st.lb.list.length-1?'':'hidden'}
-function lbPreload(list,i){if(!A.thumb)return;[i-1,i+1].forEach(function(n){var x=list[n],u=x&&A.thumb(x,'preview');if(!u)return;var im=new Image();im.decoding='async';im.src=u})}
-function lbStep(d){if(!st.lb)return;var n=st.lb.i+d;if(n<0||n>=st.lb.list.length)return;st.lb.i=n;lbShow()}
+function lbStep(d){if(!st.lb)return;var n=st.lb.i+d;if(n<0||n>=st.lb.list.length)return;st.lb.i=n;wf3.dir=d;lbShow()}
+/* v3z preview cache: at most 8 decoded wf3 bitmaps, 2 fetches at a time. */
+var wf3={map:Object.create(null),ord:[],q:[],busy:0,gen:0,dir:1,MAX:8,CONCUR:2};
+function wf3url(x){return (x&&!x.isDir&&x.type=='image'&&A.thumb)?A.thumb(x,'preview'):null}
+function wf3get(u){var e=u&&wf3.map[u];return (e&&e.ready&&e.img)?e.img:null}
+function wf3clear(){wf3.q=[];wf3.gen++;Object.keys(wf3.map).forEach(function(u){var e=wf3.map[u];if(e&&e.img){e.abort=1;try{e.img.onload=e.img.onerror=null;if(e.loading)e.img.src=''}catch(_){}}});wf3.map=Object.create(null);wf3.ord=[];wf3.busy=0}
+function wf3trim(){
+  while(wf3.ord.length>wf3.MAX){
+    var drop=-1;for(var i=0;i<wf3.ord.length;i++){var e=wf3.map[wf3.ord[i]];if(e&&!e.loading){drop=i;break}}
+    if(drop<0)break;
+    var u=wf3.ord.splice(drop,1)[0],e=wf3.map[u];
+    if(e&&e.img){try{e.img.onload=e.img.onerror=null}catch(_){}}
+    delete wf3.map[u];
+  }
+}
+function wf3enq(u,pri,gen){
+  if(!u||wf3get(u)||(wf3.map[u]&&wf3.map[u].loading))return;
+  for(var i=0;i<wf3.q.length;i++)if(wf3.q[i].u===u){wf3.q[i].pri=Math.min(wf3.q[i].pri,pri);wf3.q[i].gen=gen;return}
+  wf3.q.push({u:u,pri:pri,gen:gen});
+  wf3.q.sort(function(a,b){return a.pri-b.pri||a.gen-b.gen});
+  wf3pump();
+}
+function wf3pump(){
+  wf3.q=wf3.q.filter(function(j){return j.gen===wf3.gen});
+  while(wf3.busy<wf3.CONCUR&&wf3.q.length){
+    var j=wf3.q.shift();
+    if(wf3get(j.u)||(wf3.map[j.u]&&wf3.map[j.u].loading))continue;
+    wf3fetch(j.u);
+  }
+}
+function wf3fetch(u){
+  var e={img:new Image(),ready:false,loading:true,abort:false};
+  wf3.map[u]=e;wf3.busy++;
+  e.img.decoding='async';
+  function fin(ok){
+    e.loading=false;
+    if(e.abort){if(wf3.map[u]===e)delete wf3.map[u]}
+    else if(ok){e.ready=true;var i=wf3.ord.indexOf(u);if(i>=0)wf3.ord.splice(i,1);wf3.ord.push(u);wf3trim()}
+    else if(wf3.map[u]===e)delete wf3.map[u];
+    wf3.busy=Math.max(0,wf3.busy-1);
+    wf3pump();
+  }
+  e.img.onload=function(){
+    var d=e.img.decode?e.img.decode():Promise.resolve();
+    Promise.resolve(d).then(function(){fin(true)},function(){fin(true)});
+  };
+  e.img.onerror=function(){fin(false)};
+  e.img.src=u;
+}
+function wf3cancel(keep){
+  wf3.q=wf3.q.filter(function(j){return keep[j.u]});
+  Object.keys(wf3.map).forEach(function(u){
+    var e=wf3.map[u];
+    if(e&&e.loading&&!keep[u]){
+      e.abort=1;
+      try{e.img.onload=e.img.onerror=null;e.img.src=''}catch(_){}
+      if(wf3.map[u]===e)delete wf3.map[u];
+      wf3.busy=Math.max(0,wf3.busy-1);
+    }
+  });
+}
+function lbPreload(list,i){
+  if(!A.thumb||!list||!list.length)return;
+  var d=wf3.dir||1,gen=++wf3.gen,keep={},urls=[],seen={};
+  function add(n){var x=list[n],u=wf3url(x);if(!u||seen[u])return;seen[u]=1;urls.push(u);keep[u]=1}
+  add(i);
+  for(var k=1;k<=3;k++){add(i+k*d);add(i-k*d)}
+  wf3cancel(keep);
+  urls.forEach(function(u,pri){wf3enq(u,pri,gen)});
+}
+function wf3warm(x,span){
+  if(!x||x.isDir||x.type!='image'||!A.thumb)return;
+  var list=lbSet(x),ix=list.findIndex(function(y){return y.path==x.path});
+  if(ix<0){var u=wf3url(x);if(u){var gen=wf3.gen;wf3enq(u,0,gen)}return}
+  var n=span==null?2:span,d=wf3.dir||1,gen=wf3.gen,keep={},urls=[],seen={};
+  function add(j){var u=wf3url(list[j]);if(!u||seen[u])return;seen[u]=1;urls.push(u);keep[u]=1}
+  add(ix);
+  for(var k=1;k<=n;k++){add(ix+k*d);add(ix-k*d)}
+  urls.forEach(function(u,pri){wf3enq(u,pri,gen)});
+}
 function lbClose(fromPop){$.lbx.classList.remove('on');st.lb=null;if(!fromPop)popOv()}
 function closeLb(fromPop){if(st.lb)lbClose(fromPop)}
 function lbSet(x){
